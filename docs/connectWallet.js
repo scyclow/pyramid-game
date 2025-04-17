@@ -95,7 +95,7 @@ createComponent(
     <div>
       <div style="display: flex; justify-content: center"><slot name="button" id="case-connectNotLoading" class="hidden"></slot></div>
       <div><slot name="loading" id="case-connectLoading" class="hidden"></slot></div>
-      <div><slot name="error" id="case-connectError" class="hidden error"></slot></div>
+      <div style="margin-top: 0.25em"><slot name="error" id="case-connectError" class="hidden error"></slot></div>
     </div>
   `,
   {

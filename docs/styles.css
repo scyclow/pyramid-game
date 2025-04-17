@@ -1,9 +1,43 @@
 
+/*@import url('https://fonts.googleapis.com/css2?family=Dosis:wght@200..800&display=swap');*/
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap');
+
+
 :root {
-  --bg-color: #000;
-  --font-color: #fff;
-  --accent-color: #fff;
-  --tertiary-color: #fff;
+  /*--bg-color: #46ff5a;*/
+  /*--font-color: #000;*/
+  /*--blue-color: #09d3ff;*/
+  /*--blue-color: #0953ff;*/
+  /*--blue-color: #4791ff;*/
+  /*--red-color: #ff1d10;*/
+  /*--blue-color: #1016dc;*/
+
+  /*--blue-color: #003eca;*/
+  /*--red-color: #ff0000;*/
+  /*--magenta-color: #d08ac2;*/
+  /*--blue-color: #242af1;*/
+  /*--blue-color: #3f61ff;*/
+  /*--magenta-color: #ff46d9;*/
+  --orange-color: #ff920f;
+  --blue-color: #283fff;
+  --cyan-color: #02fafc;
+  --yellow-color: #ffff2b;
+  --red-color: #ff4646;
+  --magenta-color: #f528ff;
+  --green-color: #46ff5a;
+
+
+  --white-color: #e1ffe5;
+  --gray-color: #a1bebb;
+  --black-color: #000;
+
+
+  --accent-color: var(--magenta-color);
+  --font-color:  var(--green-color);
+  --bg-color: var(--black-color);
+
+  --tertiary-color: #000;
+  --input-color: color-mix(in srgb, var(--bg-color) 16%, #fff);
 }
 
 * {
@@ -11,6 +45,8 @@
   margin: 0;
 /*  scrollbar-color: darkgray black;
   scrollbar-width: thin;*/
+  font-family: "IBM Plex Mono", monospace;
+  stroke: var(--font-color);
 }
 
 html {
@@ -37,7 +73,7 @@ footer {
 }
 
 p {
-  margin-bottom: 1em;
+  margin: 0.5em 0;
   line-height: 1.7;
 }
 
@@ -47,7 +83,6 @@ img {
 }
 
 button, img {
-  user-select: none;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -72,7 +107,7 @@ button:disabled {
 }
 
 .address {
-  font-family: monospace;
+  /*font-family: monospace;*/
   font-weight: bold;
 }
 
@@ -112,6 +147,6 @@ button:disabled {
 
 
 ::selection {
-  background: #fff;
+  background: var(--font-color);
   color: var(--bg-color);
 }

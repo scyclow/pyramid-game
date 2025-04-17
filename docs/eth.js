@@ -1,4 +1,5 @@
 import {} from './min.ethers.js'
+import {CONTRACTS} from './contracts.js'
 
 export const bnToN = bn => Number(bn.toString())
 export const ethVal = (n, str=false) => str ? ethers.utils.formatEther(n) : Number(ethers.utils.formatEther(n))
@@ -20,9 +21,21 @@ window.toETH = toETH
 window.bnToN = bnToN
 window.fromWei = fromWei
 
-export const etherscanAddr = addr => `<a href="https://etherscan.io/address/${addr}" target="_blank" class="address">${addr}</a>`
+export const etherscanAddr = (url, addr, pretty='', style='') => {
+  return `<a href="https://${url}/address/${addr}" target="_blank" class="address" style="${style}">${pretty || addr}</a>`
+}
 
+export const addEtherscanLink = (contract, chain) => l => {
+  l.target = '_blank'
+  l.rel = 'nofollow'
+  const etherscanLink = provider.ETHERSCAN_URLS[chain]
+  const contractAddr = CONTRACTS[contract].addr[chain]
+  l.href = `https://${etherscanLink}/address/${contractAddr}#code`
+}
 
+export const addEtherscanLinks = (cls, contract, chain) => {
+  $.cls(cls).forEach(addEtherscanLink(contract, chain))
+}
 
 
 
@@ -37,6 +50,7 @@ export class Web3Provider {
     '0xaa36a7', // sepolia
     '0x2105', // base
     // '0x14a34', // base sepolia
+    // '0xa4b1', // arbitrum
   ]
 
   CHAIN_NAMES = {
@@ -45,13 +59,14 @@ export class Web3Provider {
     '0x7a69': 'local',
     '0x2105': 'base',
     '0x14a34': 'baseSepolia',
+    '0xa4b1': 'arbitrum',
   }
 
   ETHERSCAN_URLS = {
-    mainnet: 'https://etherscan.io',
-    sepolia: 'https://sepolia.etherscan.io',
-    base: 'https://basescan.org',
-    baseSepolia: 'https://sepolia.basescan.org',
+    mainnet: 'etherscan.io',
+    sepolia: 'sepolia.etherscan.io',
+    base: 'basescan.org',
+    baseSepolia: 'sepolia.basescan.org',
   }
 
 
@@ -78,6 +93,10 @@ export class Web3Provider {
 
         this.isConnected()
           .then(async (addr) => {
+
+            ethereum.on('chainChanged', (chainId) => this.connect())
+            ethereum.on('accountsChanged', (accounts) => this.connect())
+
             if (!addr) return
 
             this.hasConnected = true
@@ -161,7 +180,15 @@ export class Web3Provider {
     if (!this.isEthBrowser) return false
 
     try {
-      return await this.signer.getAddress()
+      const addr = await this.signer.getAddress()
+
+      this.currentChain().then(currentChain => {
+        if (addr && !this.VALID_CHAINS.includes(currentChain)) {
+          this.switchChain(this.FORCED_CHAIN_ID)
+        }
+      })
+
+      return addr
     } catch (e) {
       return false
     }
@@ -234,13 +261,17 @@ export class Web3Provider {
       name = 'base'
     } else if (network.chainId === 84532) {
       name = 'baseSepolia'
+    } else if (network.chainId === 42161) {
+      name = 'arbitrum'
     } else if (hasName) {
       name = network.name
     } else {
       name = network.chainId
     }
 
-    return { name, chainId, hasName, network, etherscanLink: this.ETHERSCAN_URLS[name] || '' }
+    const etherscanLink = this.ETHERSCAN_URLS[name] || ''
+
+    return { name, chainId, hasName, network, etherscanLink }
   }
 
   async contractEvents(contract, event, filterArgs) {

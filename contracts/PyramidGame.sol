@@ -20,6 +20,27 @@
 by steviep.eth
 2025
 
+
+
+TODO
+  - turn each slot into a nft
+  - put a timelimit auction on it
+    - starts when first person sends money
+    -
+
+
+
+
+Negotiation Game
+  - participants agree to lock up money
+
+
+P2P gambling
+  - online casino aesthetic
+  - gambling website where you can stake some money with a friend and play a game theory game to win the money
+
+
+
 */
 
 
@@ -53,7 +74,7 @@ interface ERC1155 {
 /// All non-leaders can consolidate their contributions with another player's contributions.
 /// All players can delegate forward and consolidation permissions to another operator.
 contract PyramidGame {
-  uint constant public SLOTS = 10;
+  uint8 constant public SLOTS = 12;
   address[SLOTS] public leaders;
 
   mapping(address => uint256) public contributions;
@@ -61,8 +82,8 @@ contract PyramidGame {
   mapping(address => bool) public commitments;
   mapping(address => address) public delegations;
 
-  event Contribution(address addr, uint256 amount);
-  event Distribution(address addr, uint256 amount);
+  event Contribution(address indexed sender, uint256 amount);
+  event Distribution(address indexed recipient, uint256 amount);
 
   address public tokenManager;
 
@@ -71,6 +92,56 @@ contract PyramidGame {
     leaders[0] = msg.sender;
     contributions[msg.sender] = 0.01 ether;
   }
+
+
+  ////// CONTRIBUTIONS
+
+  /// @notice All sends to the contract trigger contribution functionality. There is no difference
+  /// between doing this and calling `contribute`.
+  receive () external payable {
+    _contribute();
+  }
+
+  /// @notice Explicitly make a contribution. There is no difference between calling this function and sending to the contract.
+  function contribute() external payable {
+    _contribute();
+  }
+
+  /// @dev Force a distribution if the contract accrues a balance. This may occur if
+  /// distributions are directly or indirectly forwarded back to the contract.
+  function forceDistribution() external ignoreReentry {
+    _distribute(address(this).balance);
+  }
+
+
+  /// @dev Reentry is ignored instead of disallowed in order to safeguard against recursive
+  /// distributions. Setting a forward address to the Pyramid Game contract would otherwise
+  /// lead to an infinite loop. Throwing an error in this case would completely brick all
+  /// contributions. Any balance accrued by the contract from failed reentries can be manually
+  /// distributed through `forceDistribution`.
+  function _contribute() private ignoreReentry {
+    _distribute(msg.value);
+
+    contributions[msg.sender] += msg.value;
+
+    _reCache(msg.sender);
+
+    emit Contribution(msg.sender, msg.value);
+  }
+
+  bool transient locked;
+  modifier ignoreReentry {
+    if (locked) return;
+    locked = true;
+    _;
+    locked = false;
+  }
+
+
+
+
+  ////// VIEWS
+
 
   /// @notice Denotes whether an address is a top-10 contributor, and will receive a distribution
   /// when the Pyramid Game contract receives funds.
@@ -99,16 +170,9 @@ contract PyramidGame {
   }
 
 
-  /// @notice All sends to the contract trigger contribution functionality. There is no difference
-  /// between doing this and calling `contribute`.
-  receive () external payable {
-    _contribute();
-  }
 
-  /// @notice Explicitly make a contribution. There is no difference between calling this function and sending to the contract.
-  function contribute() external payable {
-    _contribute();
-  }
+  ////// ADVANCED
+
 
   /// @notice Designates a target address for which all leader distributions will be forwarded to.
   /// @dev This action can be delecated to an operator.
@@ -125,22 +189,18 @@ contract PyramidGame {
 
   /// @notice Credits the origin's total contribution amount and debits the target's total contribution amount.
   /// @dev This action can be delecated to an operator.
-  /// @dev The origin address cannot be an active leader. This restriction prevents players from dropping off
+  /// @dev The origin and target addresses cannot both be active leaders. This restriction prevents players from dropping off
   /// the leaderboard and leaving an empty slot.
-  function consolidate(address origin, address target, uint256 amount) external onlyOriginOrDelegate(origin) {
-    require(!isLeader(msg.sender), 'Leader cannot consolidate');
-    require(contributions[msg.sender] >= amount, 'Amount exceeds previous contributions');
+  function consolidate(address origin, address target) external onlyOriginOrDelegate(origin) {
+    require(target != address(0));
+    require(!isLeader(origin) || !isLeader(target), 'Leader cannot consolidate with another leader');
 
-    contributions[msg.sender] -= amount;
+    contributions[target] += contributions[origin];
+    contributions[origin] = 0;
 
-    _reCache(target, amount);
+    _reCache(target);
   }
 
-  /// @notice Renounces the sender's previous contributions, and removes them from the leaderboard.
-  /// @dev This may leave an empty slot.
-  function leave() external {
-    contributions[msg.sender] = 0;
-  }
 
   /// @notice Delegates an operator to take forward and consolidation actions.
   function delegate(address operator) external {
@@ -148,37 +208,17 @@ contract PyramidGame {
   }
 
   modifier onlyOriginOrDelegate(address account) {
-    require(account == msg.sender || delegations[account] == msg.sender);
+    require(account == msg.sender || delegations[account] == msg.sender, 'Caller is not origin or delegate');
     _;
   }
 
-  /// @dev Force a distribution if the contract accrues a balance. This may occur if
-  /// distributions are directly or indirectly forwarded back to the contract.
-  function forceDistribution() external ignoreReentry {
-    _distribute(address(this).balance);
-  }
 
 
-  bool transient locked;
-  modifier ignoreReentry {
-    if (locked) return;
-    locked = true;
 
-    _;
 
-    locked = false;
-  }
 
-  /// @dev Reentry is ignored instead of disallowed in order to safeguard against recursive
-  /// distributions. Setting a forward address to the Pyramid Game contract would otherwise
-  /// lead to an infinite loop. Throwing an error in this case would completely brick all
-  /// contributions. Any balance accrued by the contract from failed reentries can be manually
-  /// distributed through `forceDistribution`.
-  function _contribute() private ignoreReentry {
-    _distribute(msg.value);
-    _reCache(msg.sender, msg.value);
-    emit Contribution(msg.sender, msg.value);
-  }
+
+  ////// INTERNAL
 
 
   /// @dev Given the cached top 10 contributors (the leaders): calculate the total contribution amounts
@@ -203,12 +243,8 @@ contract PyramidGame {
 
   /// @dev After the distribution has been made, credit the sender's total contribution amount
   /// and recalculate the leaderboard.
-  function _reCache(address contributor, uint256 amount) private {
-    bool existingContribution = contributions[contributor] > 0;
-
-    contributions[contributor] += amount;
-
-    if (leaderContributions(9) == 0) {
+  function _reCache(address contributor) private {
+    if (leaderContributions(SLOTS - 1) == 0) {
       _setFirstEmptySlot(contributor);
     } else {
       _replaceLowestLeader(contributor);
@@ -250,7 +286,7 @@ contract PyramidGame {
 
 
 
-  // RECOVER ERC20s, ERC721s, ERC1155s
+  ////// RECOVER ERC20s, ERC721s, ERC1155s
 
   modifier onlyTokenManager() {
     require(msg.sender == tokenManager, 'Only TokenManager can perform this action');

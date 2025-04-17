@@ -3,50 +3,21 @@ const toETH = amt => ethers.utils.parseEther(String(amt))
 const txValue = amt => ({ value: toETH(amt) })
 
 async function main() {
-    const signers = await ethers.getSigners()
+  const signers = await ethers.getSigners()
 
-    picker = signers[0]
-    marketMaker = signers[1]
-    predicter1 = signers[2]
-    predicter2 = signers[3]
+  const PyramidGameFactory = await ethers.getContractFactory('PyramidGame', signers[0])
+  const PyramidGame = await PyramidGameFactory.deploy()
+  await PyramidGame.deployed()
 
-
-    const PredictTheNumberFactory = await ethers.getContractFactory('PredictTheNumber', picker)
-    const NumberCoinFactory = await ethers.getContractFactory('NumberCoin', picker)
-
-    PredictTheNumber = await PredictTheNumberFactory.deploy()
-    await PredictTheNumber.deployed()
+  const PG = (s) => PyramidGame.connect(signers[s])
 
 
-    ONE = await NumberCoinFactory.attach(
-      await PredictTheNumber.ONE()
-    )
-    TWO = await NumberCoinFactory.attach(
-      await PredictTheNumber.TWO()
-    )
-    THREE = await NumberCoinFactory.attach(
-      await PredictTheNumber.THREE()
-    )
-    FOUR = await NumberCoinFactory.attach(
-      await PredictTheNumber.FOUR()
-    )
-    FIVE = await NumberCoinFactory.attach(
-      await PredictTheNumber.FIVE()
-    )
 
-    await PredictTheNumber.connect(marketMaker).create(txValue('1'))
+  await PG(0).contribute(txValue(0.99))
 
+  for (let i = 1; i< 10; i++) await PG(i).contribute(txValue(i + 1))
 
-    allCoins = [ONE, TWO, THREE, FOUR, FIVE]
-
-
-  console.log(`PredictTheNumber:`, PredictTheNumber.address)
-  console.log(`ONE:`, ONE.address)
-  console.log(`TWO:`, TWO.address)
-  console.log(`THREE:`, THREE.address)
-  console.log(`FOUR:`, FOUR.address)
-  console.log(`FIVE:`, FIVE.address)
-
+  console.log(`PyramidGame:`, PyramidGame.address)
 }
 
 
