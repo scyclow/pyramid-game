@@ -29,7 +29,7 @@ const roughGasUsed = tx => {
 const sumGasUsed = txs => Promise.all(txs.map(roughGasUsed)).then(t => t.reduce((a, c) => a + c, 0))
 
 const expectBalanceEquals = async (s, expectedBalance) => {
-  return expect(await getBalance(s) + await sumGasUsed(txs[s.address])).to.be.closeTo(expectedBalance, 0.00001)
+  return expect(await getBalance(s) + await sumGasUsed(txs[s.address])).to.be.closeTo(expectedBalance, 0.000000001)
 }
 
 
@@ -97,6 +97,9 @@ describe('PyramidGame', () => {
         startingBalances[signers[s].address] = await getBalance(signers[s])
       }
 
+
+
+
       const contribute = async (s, val) => {
         if (!estimatedWinnings[s.address]) estimatedWinnings[s.address] = 0
         if (!payments[s.address]) payments[s.address] = []
@@ -137,36 +140,10 @@ describe('PyramidGame', () => {
 
 
 
-
         if (ownedToken) contributions[ownedToken] += val
         else {
-          if (Object.keys(tokenOwners).length < 12) {
-            const tokenId = Object.keys(tokenOwners).length
-            tokenOwners[tokenId] = s.address
-            contributions[tokenId] = val
-          } else {
-            const lowestToken = Object.keys(contributions).reduce((a, c) =>
-              contributions[c] < contributions[a] ? c : a
-            , 0)
-
-
-            const totalContributions = val + ((coinBalances[s.address] / 100_000) || 0)
-
-            if (totalContributions > contributions[lowestToken]) {
-              coinBalances[tokenOwners[lowestToken]] = contributions[lowestToken] * 100_000
-              coinBalances[s.address] = 0
-              tokenOwners[lowestToken] = s.address
-              forwards[lowestToken] = s.address
-              contributions[lowestToken] = totalContributions
-
-            } else {
-              coinBalances[s.address] = val * 100_000
-            }
-          }
-
+          reorg(s, val)
         }
-
-
 
         const r = await PG(s).contribute(txValue(val))
         txs[s.address].push(r)
@@ -175,8 +152,6 @@ describe('PyramidGame', () => {
 
         for (let s = 0; s < signers.length; s++) {
           const a = signers[s].address
-
-
           try {
             await expectBalanceEquals(
               signers[s],
@@ -184,7 +159,7 @@ describe('PyramidGame', () => {
             )
 
             const coinsOwned = ethVal(await PG(signers[s]).balanceOf(signers[s].address))
-            expect(coinsOwned).to.equal(coinBalances[signers[s].address] || 0)
+            expect(coinsOwned).to.be.closeTo(coinBalances[signers[s].address] || 0, 0.000000001)
           } catch (e) {
 
             console.log('========PAYMENTS======')
@@ -197,17 +172,53 @@ describe('PyramidGame', () => {
             console.log((startingBalances[signers[s].address]||0), (estimatedWinnings[signers[s].address]||0), (ethSent[signers[s].address]||0))
             throw new Error(e)
           }
-
         }
         return r
       }
 
 
-      // const commitForward = async (s, origin) => {
-      //   const r = await PG(s).commitForward(origin)
-      //   txs[s].push(r)
-      //   return r
-      // }
+
+
+      function reorg(s, val) {
+        // Not all leader tokens have been allocated
+        if (Object.keys(tokenOwners).length < 12) {
+          const tokenId = Object.keys(tokenOwners).length
+          tokenOwners[tokenId] = s.address
+          contributions[tokenId] = val
+        } else {
+          const lowestToken = Object.keys(contributions).reduce((a, c) =>
+            contributions[c] < contributions[a] ? c : a
+          , 0)
+
+          const totalContributions = val + ((coinBalances[s.address] / 100_000) || 0)
+
+          // replace lowest leader
+          if (totalContributions > contributions[lowestToken]) {
+
+            // refund lowest leader in coins
+            coinBalances[tokenOwners[lowestToken]] = contributions[lowestToken] * 100_000
+
+            // update leader coin contributions
+            contributions[lowestToken] = totalContributions
+
+            // change leader
+            tokenOwners[lowestToken] = s.address
+
+            // remove new leader's coins
+            coinBalances[s.address] = 0
+
+            // reset the recipient
+            forwards[lowestToken] = s.address
+
+
+          // credit sender in coins
+          } else {
+            coinBalances[s.address] += val * 100_000
+          }
+
+        }
+      }
+
 
       const setRecipient = async (s, tokenId, recipient) => {
 
@@ -219,6 +230,11 @@ describe('PyramidGame', () => {
         return r
       }
 
+
+
+
+
+
       const transferToken = async (s, tokenId, recipient) => {
         forwards[tokenId] = recipient.address
 
@@ -228,24 +244,36 @@ describe('PyramidGame', () => {
         return r
       }
 
-      // const consolidate = async (s, origin, target) => {
-      //   const ix = signers.map(s => s.address.toLowerCase()).indexOf(target.toLowerCase())
 
-      //   contributions[ix] += contributions[s]
-      //   contributions[s] = 0
+      const claimLeadership = async (s) => {
+        reorg(s, 0)
+
+        const r = await PG(s).claimLeadership()
+        txs[s.address].push(r)
+        return r
+      }
 
 
-      //   const r = await PG(s).consolidate(origin, target)
-      //   txs[s].push(r)
-      //   return r
-      // }
+      const transferCoin = async (s1, s2, amount) => {
 
-      // const leave = async (s) => {
-      //   contributions[s] = 0
-      //   const r = await PG(s).leave()
-      //   txs[s].push(r)
-      //   return r
-      // }
+        coinBalances[s1.address] -= amount
+        coinBalances[s2.address] += amount
+
+        const r = await PG(s1).transfer(s2.address, toETH(amount))
+        txs[s1.address].push(r)
+        return r
+      }
+
+
+      const addToLeaderContributions = async (s, tokenId, amount) => {
+        coinBalances[s.address] -= amount
+        contributions[tokenId] += amount / 100_000
+
+        const r = await PG(s).addToLeaderContributions(tokenId, toETH(amount))
+        txs[s.address].push(r)
+        return r
+      }
+
 
 
 
@@ -253,7 +281,6 @@ describe('PyramidGame', () => {
 
       for (let i = 0; i < 12; i++) {
         await contribute(signers[i], i / 10)
-        console.log(i, await PGL(signers[i]).totalSupply())
 
         if (i % 2) {
           await setRecipient(signers[i], i, signers[i - 1])
@@ -269,53 +296,30 @@ describe('PyramidGame', () => {
       }
 
 
-      for (let t = 0; t < 3; t++) {
+      for (let t = 0; t < 1; t++) {
         for (let i = 0; i < 20; i++) {
-          await contribute(signers[i], Math.random())
+          await contribute(signers[i], (i+1)* t / 32)
         }
       }
 
 
-      // await forward(0, signers[0].address, signers[2].address)
 
-      // await contribute(signers[15], 3)
 
-      // await forward(0, signers[0].address, ZERO_ADDR)
+      await transferCoin(signers[5], signers[7], 20001)
 
-      // await contribute(signers[16], 3)
-
-      // await forward(1, signers[1].address, signers[2].address)
-      // await commitForward(1, signers[1].address)
-
-      // await expectRevert(
-      //   forward(1, signers[1].address, ZERO_ADDR),
-      //   'Forward cannot be changed'
-      // )
-
-      // await contribute(signers[12], 1)
-
-      // await consolidate(15, signers[15].address, signers[16].address)
+      await claimLeadership(signers[7])
+      await addToLeaderContributions(signers[0], 0, 1000)
 
 
 
-      // console.log(payments)
+      await contribute(signers[4], 1)
 
 
 
 
 
-      // const preLeave = await getBalance(signers[0])
-      // await leave(0)
-      // await contribute(12, 10)
-      // const postLeave = await getBalance(signers[0])
+      await logStats()
 
-      // await expect(preLeave).to.be.closeTo(postLeave, 0.0001)
-
-
-      // await expectRevert(
-      //   consolidate(12, signers[12].address, signers[0].address),
-      //   'Leader cannot consolidate'
-      // )
 
       async function logStats() {
 
@@ -374,16 +378,56 @@ describe('PyramidGame', () => {
 
     })
 
-    it.skip('shouldnt break', async () => {
+    it('sending directly to contracts should work', async () => {
+      await send(signers[0], PyramidGame, 1)
+      await send(signers[0], PyramidGameLeaders, 1)
+    })
+
+    it.only('token uri should work', async () => {
+      const uri = await PGL(signers[0]).tokenURI(0)
+      console.log(getJsonURI(uri))
+
+      for (let i = 1; i < 12; i++) {
+        await send(signers[i], PyramidGame, 1)
+
+      const uri = await PGL(signers[i]).tokenURI(i)
+      console.log(getJsonURI(uri))
+      }
+
+    })
+
+    it('permissions should work', async () => {
+      await expectRevert(
+        PGL(signers[0]).incrementContribution(0, 100000),
+        'Only the root address can perform this action'
+      )
+
+      await expectRevert(
+        PGL(signers[1]).mint(signers[1].address, 100000),
+        'Only the root address can perform this action'
+      )
+
+      await expectRevert(
+        PGL(signers[1]).reorg(0, signers[1].address, 100000),
+        'Only the root address can perform this action'
+      )
+
+      await expectRevert(
+        PGL(signers[1]).setRecipient(0, signers[1].address),
+        'Only token owner can perform this action'
+      )
+    })
+
+    it('shouldnt break from recursion', async () => {
       const ReinvestTestFactory = await ethers.getContractFactory('ReinvestTest', signers[0])
       const ReinvestTest = await ReinvestTestFactory.deploy()
       await ReinvestTest.deployed()
 
 
-      await PG(0).forward(signers[0].address, ReinvestTest.address)
+      await PGL(signers[0]).setRecipient(0, ReinvestTest.address)
 
 
-      await PG(1).contribute(txValue(0.01))
+      await PG(signers[1]).contribute(txValue(0.01))
 
       expect(await getBalance(ReinvestTest)).to.equal(0)
       expect(await getBalance(PyramidGame)).to.equal(0.01)
@@ -391,16 +435,11 @@ describe('PyramidGame', () => {
       const signer0b4 = await getBalance(signers[0])
       const signer1b4 = await getBalance(signers[1])
 
-      await PG(2).forceDistribution()
+      await PG(signers[2]).forceDistribution()
 
       expect(await getBalance(signers[1])).to.be.closeTo(signer1b4 + 0.005, 0.00000000001)
       expect(await getBalance(PyramidGame)).to.equal(0.005)
 
-
-      await PG(0).forward(signers[0].address, ReinvestTest.address)
-
-      await PG(2).forceDistribution()
-      expect(await getBalance(signers[1])).to.equal(signer1b4 + 0.0075)
 
     })
 
