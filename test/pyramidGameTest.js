@@ -65,7 +65,7 @@ describe('PyramidGame', () => {
     })
 
 
-    const PyramidGameFactory = await ethers.getContractFactory('PyramidGameNFT', signers[0])
+    const PyramidGameFactory = await ethers.getContractFactory('PyramidGame', signers[0])
     const PyramidGameLeadersFactory = await ethers.getContractFactory('PyramidGameLeaders', signers[0])
 
 
@@ -265,11 +265,11 @@ describe('PyramidGame', () => {
       }
 
 
-      const addToLeaderContributions = async (s, tokenId, amount) => {
+      const addToLeaderContributionBalance = async (s, tokenId, amount) => {
         coinBalances[s.address] -= amount
         contributions[tokenId] += amount / 100_000
 
-        const r = await PG(s).addToLeaderContributions(tokenId, toETH(amount))
+        const r = await PG(s).addToLeaderContributionBalance(tokenId, toETH(amount))
         txs[s.address].push(r)
         return r
       }
@@ -308,7 +308,7 @@ describe('PyramidGame', () => {
       await transferCoin(signers[5], signers[7], 20001)
 
       await claimLeadership(signers[7])
-      await addToLeaderContributions(signers[0], 0, 1000)
+      await addToLeaderContributionBalance(signers[0], 0, 1000)
 
 
 
@@ -383,7 +383,7 @@ describe('PyramidGame', () => {
       await send(signers[0], PyramidGameLeaders, 1)
     })
 
-    it.only('token uri should work', async () => {
+    it('token uri should work', async () => {
       const uri = await PGL(signers[0]).tokenURI(0)
       console.log(getJsonURI(uri))
 
@@ -398,7 +398,7 @@ describe('PyramidGame', () => {
 
     it('permissions should work', async () => {
       await expectRevert(
-        PGL(signers[0]).incrementContribution(0, 100000),
+        PGL(signers[0]).incrementContributionBalance(0, 100000),
         'Only the root address can perform this action'
       )
 

@@ -21,80 +21,50 @@ by steviep.eth
 2025
 
 
-
-TODO
-  - turn each slot into a nft
-  - put a timelimit auction on it
-    - starts when first person sends money
-    -
-
-
-
-
-Negotiation Game
-  - participants agree to lock up money
-
-
-P2P gambling
-  - online casino aesthetic
-  - gambling website where you can stake some money with a friend and play a game theory game to win the money
-
-
-
 */
 
 
-
+import "./Dependencies.sol";
 
 pragma solidity ^0.8.28;
 
 
-interface ERC20 {
-  function transfer(address, uint256) external;
-
-}
-interface ERC721 {
-  function safeTransferFrom(address, address, uint256) external;
-  function safeTransferFrom(address, address, uint256, bytes calldata) external;
-}
-
-interface ERC1155 {
-  function safeTransferFrom(address, address, uint256, uint256, bytes calldata) external;
-  function safeBatchTransferFrom(address, address, uint256[] calldata, uint256[] calldata, bytes calldata) external;
-}
-
 /// @title Pyramid Game
 /// @author steviep.eth
 /// @notice A pyramid scheme game in which all ETH sent to the contract is split among the top previous senders.
-/// Two phases take place when an ETH contribution is made to the Pyramid Game contract: distribution and recaching.
-/// The distribution phase splits the contribution among the top 10 previous contributors (i.e. the "Leaders").
-/// This split is proportional, based on the cumulative amount of previous contributions made by the leaders.
-/// The recaching phase stores the sender's contribution, and then recalculates the top 10 contributors
-/// All players can optionally forward payments to another address.
-/// All non-leaders can consolidate their contributions with another player's contributions.
-/// All players can delegate forward and consolidation permissions to another operator.
-contract PyramidGame {
+/// Two phases take place when an ETH contribution is made to the Pyramid Game contract: DISTRIBUTION and RECACHING.
+/// The DISTRIBUTION phase splits the contribution among the Leaders.
+/// This split is proportional, based on how much Leaders have directly or indirectly contributed.
+/// The RECACHING phase then recalculates the contribution totals and determines the new Leaders.
+/// Leadership is managed by a LEADER NFT, which can be transfered to another address.
+/// The LEADER NFT is automatically transferred upon Leadership recalculation if necessary.
+/// Contribution amounts are managed by an ERC-20 token, $PYRAMID.
+/// New $PYRAMID is minted to contributors when they fail to become a Leader, and when former Leaders are kicked off the Leader Board.
+/// $PYRAMID is burned when a contributor becomes a Leader.
+/// The total circulating $PYRAMID supply equals the total historical ETH contributions made, minus the sum of all contributions associated with current Leaders.
+contract PyramidGame is ERC20 {
   uint8 constant public SLOTS = 12;
-  address[SLOTS] public leaders;
+  uint8 constant public INVALID_SLOT = SLOTS + 1;
 
-  mapping(address => uint256) public contributions;
-  mapping(address => address) public forwards;
-  mapping(address => bool) public commitments;
-  mapping(address => address) public delegations;
+  uint256 constant public TOKENS_PER_ETH = 100_000;
+
+  PyramidGameLeaders public leaders;
 
   event Contribution(address indexed sender, uint256 amount);
   event Distribution(address indexed recipient, uint256 amount);
 
-  address public tokenManager;
-
-  constructor() {
-    tokenManager = msg.sender;
-    leaders[0] = msg.sender;
-    contributions[msg.sender] = 0.01 ether;
+  constructor() ERC20("Pyramid Game", "PYRAMID") {
+    leaders = new PyramidGameLeaders(msg.sender, SLOTS);
   }
 
 
   ////// CONTRIBUTIONS
+
+  /// @notice View a participant's direct and indirect contributions
+  function contributions(address contributor) public view returns (uint256) {
+    return balanceOf(contributor) / TOKENS_PER_ETH;
+  }
+
 
   /// @notice All sends to the contract trigger contribution functionality. There is no difference
   /// between doing this and calling `contribute`.
@@ -107,6 +77,19 @@ contract PyramidGame {
     _contribute();
   }
 
+  /// @notice Claims Leadership role for the caller if they have amassed enough $PYRAMID.
+  function claimLeadership() external {
+    _reorg(msg.sender, 0);
+  }
+
+
+  /// @notice Allows existing leaders to burn $PYRAMID and increment their LEADER token's contribution balance
+  function addToLeaderContributionBalance(uint256 tokenId, uint256 tokenAmount) external {
+    _burn(msg.sender, tokenAmount);
+    leaders.incrementContributionBalance(tokenId, tokenAmount / TOKENS_PER_ETH);
+  }
+
+
   /// @dev Force a distribution if the contract accrues a balance. This may occur if
   /// distributions are directly or indirectly forwarded back to the contract.
   function forceDistribution() external ignoreReentry {
@@ -114,20 +97,87 @@ contract PyramidGame {
   }
 
 
+
+  ////// INTERNAL
+
+
   /// @dev Reentry is ignored instead of disallowed in order to safeguard against recursive
-  /// distributions. Setting a forward address to the Pyramid Game contract would otherwise
-  /// lead to an infinite loop. Throwing an error in this case would completely brick all
+  /// distributions. Sending a LEADER token to the Pyramid Game contract (or setting it as a recipient)
+  /// would otherwise lead to an infinite loop. Throwing an error in this case would completely brick all
   /// contributions. Any balance accrued by the contract from failed reentries can be manually
   /// distributed through `forceDistribution`.
-  function _contribute() private ignoreReentry {
-    _distribute(msg.value);
+  function _contribute() internal ignoreReentry {
+    uint8 senderIsLeaderTokenId = _distribute(msg.value);
 
-    contributions[msg.sender] += msg.value;
-
-    _reCache(msg.sender);
+    if (senderIsLeaderTokenId != INVALID_SLOT) {
+      leaders.incrementContributionBalance(uint256(senderIsLeaderTokenId), msg.value);
+    } else {
+      _reorg(msg.sender, msg.value);
+    }
 
     emit Contribution(msg.sender, msg.value);
   }
+
+
+  /// @dev Given the cached Leaders: calculate the total contribution amounts, determine each
+  /// Leader's percentage of the sum, and distribute the original contribution proportionally.
+  function _distribute(uint256 amount) internal returns (uint8) {
+    uint256 sum = leaders.contributionTotal();
+
+    uint8 senderIsLeaderTokenId = INVALID_SLOT;
+
+    for (uint8 ix; ix < SLOTS; ix++) {
+      if (!leaders.exists(ix)) return senderIsLeaderTokenId;
+      if (leaders.ownerOf(ix) == msg.sender) {
+        senderIsLeaderTokenId = ix;
+      }
+
+      uint256 amountToTransfer = (amount * leaders.contributions(ix)) / sum;
+      address recipient = leaders.recipientOf(ix);
+
+      bool distributionSuccessful =  _safeTransferETH(recipient, amountToTransfer);
+
+      if (distributionSuccessful) {
+        emit Distribution(recipient, amountToTransfer);
+      }
+    }
+
+    return senderIsLeaderTokenId;
+  }
+
+  /// @dev After the distribution has been made, recalculate the leaderboard.
+  function _reorg(address contributor, uint256 contributionAmount) internal {
+    if (leaders.totalSupply() < SLOTS) {
+      leaders.mint(contributor, contributionAmount);
+    } else {
+      (uint256 tokenId, uint256 leaderAmount) = leaders.lowestLeader();
+      uint256 senderContributions = contributions(contributor) + contributionAmount;
+      if (senderContributions > leaderAmount) {
+        _replaceLowestLeader(tokenId, contributor, leaderAmount, senderContributions);
+      } else {
+        _mint(contributor, contributionAmount * TOKENS_PER_ETH);
+      }
+    }
+  }
+
+  /// @dev Find the leader with the lowest total contribution amount and replace them with the sender.
+  function _replaceLowestLeader(uint256 tokenId, address contributor, uint256 leaderAmount, uint256 senderContributions) internal {
+    _mint(leaders.ownerOf(tokenId), leaderAmount * TOKENS_PER_ETH);
+    leaders.reorg(tokenId, contributor, senderContributions - leaderAmount);
+    _burn(contributor, balanceOf(contributor));
+  }
+
+
+  /**
+   * @notice Transfer ETH and return the success status.
+   * @dev This function only forwards 30,000 gas to the callee.
+   */
+  function _safeTransferETH(address to, uint256 value) internal returns (bool) {
+    (bool success, ) = to.call{ value: value, gas: 60_000 }(new bytes(0));
+    return success;
+  }
+
+
 
   bool transient locked;
   modifier ignoreReentry {
@@ -137,201 +187,164 @@ contract PyramidGame {
     locked = false;
   }
 
+}
 
 
 
-  ////// VIEWS
+/// @title Pyramid Game
+/// @author steviep.eth
+/// @notice NFT contract that manages the Leader Board for Pyramid Game.
+contract PyramidGameLeaders is ERC721 {
+  address public root;
+  uint256 public contributionTotal;
+  uint256 public totalSupply = 1;
+  uint256 public SLOTS;
 
+  mapping(uint256 => uint256) public contributions;
+  mapping(uint256 => address) public recipientOf;
 
-  /// @notice Denotes whether an address is a top-10 contributor, and will receive a distribution
-  /// when the Pyramid Game contract receives funds.
-  function isLeader(address account) public view returns (bool) {
-    for (uint8 i; i < SLOTS; i++) {
-      if (leaders[i] == account) return true;
-    }
-    return false;
-  }
+  constructor(address deployer, uint256 slots) ERC721("Pyramid Game Leader", "LEADER"){
+    root = msg.sender;
+    SLOTS = slots;
 
-  /// @notice The total amount of ETH contributed by all current leaders.
-  function leaderSum() public view returns (uint256) {
-    uint256 sum;
-    for (uint8 ix; ix < SLOTS; ix++) {
-      sum += leaderContributions(ix);
-    }
-
-    return sum;
-  }
-
-  /// @notice The total amount of ETH contributed by individual leaders.
-  /// @param ix The index of the leader in the leaders list
-  /// @return Total contributions of the the address
-  function leaderContributions(uint8 ix) public view returns (uint256) {
-    return contributions[leaders[ix]];
+    _mint(deployer, 0);
+    incrementContributionBalance(0, 0.01 ether);
   }
 
 
-
-  ////// ADVANCED
-
-
-  /// @notice Designates a target address for which all leader distributions will be forwarded to.
-  /// @dev This action can be delecated to an operator.
-  function forward(address origin, address target) external onlyOriginOrDelegate(origin) {
-    require(!commitments[origin], 'Forward cannot be changed');
-    forwards[origin] = target;
+  receive () external payable {
+    payable(root).call{ value: msg.value }(new bytes(0));
   }
 
-  /// @notice Commits a forward. This cannot be undone.
-  /// @dev This action can be delecated to an operator.
-  function commitForward(address origin) external onlyOriginOrDelegate(origin) {
-    commitments[origin] = true;
+  function exists(uint256 tokenId) external view returns (bool) {
+    return _exists(tokenId);
   }
 
-  /// @notice Credits the origin's total contribution amount and debits the target's total contribution amount.
-  /// @dev This action can be delecated to an operator.
-  /// @dev The origin and target addresses cannot both be active leaders. This restriction prevents players from dropping off
-  /// the leaderboard and leaving an empty slot.
-  function consolidate(address origin, address target) external onlyOriginOrDelegate(origin) {
-    require(target != address(0));
-    require(!isLeader(origin) || !isLeader(target), 'Leader cannot consolidate with another leader');
-
-    contributions[target] += contributions[origin];
-    contributions[origin] = 0;
-
-    _reCache(target);
-  }
+  function lowestLeader() external view returns (uint256, uint256) {
+    uint256 lowestLeaderIx = 0;
+    uint256 lowestLeaderAmount = contributions[0];
 
 
-  /// @notice Delegates an operator to take forward and consolidation actions.
-  function delegate(address operator) external {
-    delegations[msg.sender] = operator;
-  }
-
-  modifier onlyOriginOrDelegate(address account) {
-    require(account == msg.sender || delegations[account] == msg.sender, 'Caller is not origin or delegate');
-    _;
-  }
-
-
-
-
-
-
-
-  ////// INTERNAL
-
-
-  /// @dev Given the cached top 10 contributors (the leaders): calculate the total contribution amounts
-  /// of all leaders, determine each leader's percentage of the sum, and distribute the original contribution
-  /// proportionally.
-  function _distribute(uint256 amount) private {
-    uint256 sum = leaderSum();
-
-    for (uint8 ix; ix < SLOTS; ix++) {
-      if (leaders[ix] == address(0)) return;
-
-      uint256 amountToTransfer = (amount * leaderContributions(ix)) / sum;
-      address recipient = forwards[leaders[ix]] == address(0) ? leaders[ix] : forwards[leaders[ix]];
-
-      (bool distributionMade,) = payable(recipient).call{value: amountToTransfer}('');
-
-      if (distributionMade) {
-        emit Distribution(recipient, amountToTransfer);
-      }
-    }
-  }
-
-  /// @dev After the distribution has been made, credit the sender's total contribution amount
-  /// and recalculate the leaderboard.
-  function _reCache(address contributor) private {
-    if (leaderContributions(SLOTS - 1) == 0) {
-      _setFirstEmptySlot(contributor);
-    } else {
-      _replaceLowestLeader(contributor);
-    }
-  }
-
-  /// @dev If there are fewer than 10 contributors, designate the first empty slot to the sender.
-  function _setFirstEmptySlot(address contributor) private {
-    for (uint8 ix; ix < SLOTS; ix++) {
-      if (leaders[ix] == contributor) {
-        return;
-      } else if (leaderContributions(ix) == 0) {
-        leaders[ix] = contributor;
-        return;
-      }
-    }
-  }
-
-  /// @dev Find the leader with the lowest total contribution amount and replace them with the sender.
-  function _replaceLowestLeader(address contributor) private {
-    uint8 lowestLeaderIx;
-
-    for (uint8 ix = 0; ix < SLOTS; ix++) {
-      if (leaders[ix] == contributor) return;
-
-      if (leaderContributions(ix) < leaderContributions(lowestLeaderIx)) {
+    for (uint256 ix = 1; ix < SLOTS; ix++) {
+      if (contributions[ix] < lowestLeaderAmount) {
         lowestLeaderIx = ix;
+        lowestLeaderAmount = contributions[lowestLeaderIx];
       }
     }
 
-    if (leaderContributions(lowestLeaderIx) < contributions[contributor]) {
-      leaders[lowestLeaderIx] = contributor;
-
-    }
+    return (lowestLeaderIx, lowestLeaderAmount);
   }
 
 
 
+  /// SET RECIPIENTS
+
+  /// @notice Allows the owner of a LEADER token to forward all Pyramid Game ETH to another address.
+  function setRecipient(uint256 tokenId, address recipient) external {
+    require(ownerOf(tokenId) == msg.sender, 'Only token owner can perform this action');
+    recipientOf[tokenId] = recipient;
+  }
+
+  /// @dev Clear the recipient address on token transfer.
+  function _beforeTokenTransfer(address, address to, uint256 tokenId) internal virtual override {
+    recipientOf[tokenId] = to;
+  }
 
 
 
-  ////// RECOVER ERC20s, ERC721s, ERC1155s
+  /// ONLY THE PYRAMID GAME CONTRACT CAN TAKE THESE ACTIONS
 
-  modifier onlyTokenManager() {
-    require(msg.sender == tokenManager, 'Only TokenManager can perform this action');
+  modifier onlyRoot {
+    require(msg.sender == root, 'Only the root address can perform this action');
     _;
   }
 
-  /// @notice Transfer the token manager role to another address.
-  function transferTokenManager(address newManager) external onlyTokenManager {
-    tokenManager = newManager;
+  function incrementContributionBalance(uint256 tokenId, uint256 incrementAmount) public onlyRoot {
+    contributions[tokenId] += incrementAmount;
+    contributionTotal += incrementAmount;
+    emit MetadataUpdate(tokenId);
   }
 
-  /// @notice Recover all ERC20 tokens sent to the contract.
-  function transferERC20(address contractAddr, uint256 amount) external onlyTokenManager {
-    ERC20(contractAddr).transfer(contractAddr, amount);
+  function mint(address recipient, uint256 incrementAmount) external onlyRoot {
+    require(totalSupply < SLOTS);
+    _mint(recipient, totalSupply);
+    incrementContributionBalance(totalSupply, incrementAmount);
+    totalSupply += 1;
   }
 
-  /// @notice Recover all ERC721 tokens sent to the contract.
-  function transferERC721(address contractAddr, address to, uint256 tokenId) external onlyTokenManager {
-    ERC721(contractAddr).safeTransferFrom(address(this), to, tokenId);
+  function reorg(uint256 tokenId, address recipient, uint256 incrementAmount) external onlyRoot {
+    incrementContributionBalance(tokenId, incrementAmount);
+    _transfer(ownerOf(tokenId), recipient, tokenId);
   }
 
-  /// @notice Recover all ERC721 tokens sent to the contract.
-  function transferERC721(address contractAddr, address to, uint256 tokenId, bytes calldata data) external onlyTokenManager {
-    ERC721(contractAddr).safeTransferFrom(address(this), to, tokenId, data);
+
+  /// METADATA
+
+
+
+  function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    string memory tokenString = Strings.toString(tokenId);
+
+    bytes memory encodedSVG = abi.encodePacked(
+      'data:image/svg+xml;base64,',
+      Base64.encode(abi.encodePacked(rawSVG(tokenId)))
+    );
+
+
+    return string(abi.encodePacked(
+      'data:application/json;utf8,'
+      '{"name": "Pyramid Game: Leader #', tokenString,
+      '", "description": "'
+      '", "license": "CC0'
+      '", "image": "', encodedSVG,
+      '", "attributes": [{ "trait_type": "Leader Token Contributions", "value": "', Strings.toString(contributions[tokenId]), ' wei" }]'
+      '}'
+    ));
   }
 
-  /// @notice Recover all ERC1155 tokens sent to the contract.
-  function transferERC1155(address contractAddr, address to, uint256 id, uint256 amount, bytes calldata data) external onlyTokenManager {
-    ERC1155(contractAddr).safeTransferFrom(address(this), to, id, amount, data);
+  function rawSVG(uint256 tokenId) public view returns (string memory) {
+    string memory green = '#46ff5a';
+    string memory black = '#000';
+    string memory blue = '#283fff';
+    string memory red = '#ff1b1b';
+
+    string[2][12] memory colors = [
+      [black, green],
+      [blue, green],
+      [red, green],
+
+      [blue, black],
+      [red, black],
+      [green, black],
+
+      [red, blue],
+      [green, blue],
+      [black, blue],
+
+      [green, red],
+      [black, red],
+      [blue, red]
+    ];
+
+
+    return string.concat(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 487 487">'
+        '<style>*{stroke:', colors[tokenId][0],';fill:', colors[tokenId][1],'}</style>'
+        '<rect width="100%" height="100%" x="0" y="0" stroke-width="0"></rect>'
+        '<path d="M465.001 435.5H244.995H20.5L242.75 50L465.001 435.5Z"  stroke-width="14"/>'
+        '<path d="M205.5 348C216 357 227.513 359.224 243.001 359.999C293 362.5 301.001 294.999 243.001 293.499C185.001 291.999 196.5 224.5 243.001 229.998C243.001 229.998 259.5 229.998 276.5 244"  stroke-width="14" stroke-linecap="square"/>'
+        '<line x1="242.5" y1="201" x2="242.5" y2="386"  stroke-width="14"/>'
+      '</svg>'
+    );
+
   }
 
-  /// @notice Recover all ERC1155 tokens sent to the contract.
-  function transferERC1155(address contractAddr, address to, uint256[] calldata ids, uint256[] calldata amounts, bytes calldata data) external onlyTokenManager {
-    ERC1155(contractAddr).safeBatchTransferFrom(address(this), to, ids, amounts, data);
-  }
 
-  function onERC721Received(address, address, uint256, bytes calldata) external pure returns(bytes4) {
-    return this.onERC721Received.selector;
-  }
+  event MetadataUpdate(uint256 _tokenId);
+  event BatchMetadataUpdate(uint256 _fromTokenId, uint256 _toTokenId);
 
-  function onERC1155Received(address, address, uint256, uint256, bytes calldata) external pure returns (bytes4) {
-    return this.onERC1155Received.selector;
-  }
-
-  function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata) external pure returns (bytes4) {
-    return this.onERC1155BatchReceived.selector;
+  function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721) returns (bool) {
+    // ERC2981 & ERC4906
+    return interfaceId == bytes4(0x2a55205a) || interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
   }
 }

@@ -18,11 +18,13 @@
   /*--blue-color: #242af1;*/
   /*--blue-color: #3f61ff;*/
   /*--magenta-color: #ff46d9;*/
+  /*--red-color: #ff4646;*/
+
   --orange-color: #ff920f;
   --blue-color: #283fff;
   --cyan-color: #02fafc;
   --yellow-color: #ffff2b;
-  --red-color: #ff4646;
+  --red-color: #ff1b1b;
   --magenta-color: #f528ff;
   --green-color: #46ff5a;
 
@@ -33,8 +35,8 @@
 
 
   --accent-color: var(--magenta-color);
-  --font-color:  var(--green-color);
-  --bg-color: var(--black-color);
+  --font-color:  var(--black-color);
+  --bg-color: var(--green-color);
 
   --tertiary-color: #000;
   --input-color: color-mix(in srgb, var(--bg-color) 16%, #fff);
