@@ -56,8 +56,8 @@ contract PyramidGame is ERC20 {
   event Distribution(address indexed recipient, uint256 amount);
   event ChildPyramidDeployed(address indexed childAddress, address indexed deployer, uint256 initialAmount);
 
-  constructor(uint256 initialAmount, string[4] memory colors, address uri) ERC20("Pyramid Game", "PYRAMID") {
-    initialize(msg.sender, initialAmount, colors, uri);
+  constructor(uint256 initialAmount, string[4] memory colors) ERC20("Pyramid Game", "PYRAMID") {
+    initialize(msg.sender, initialAmount, colors);
   }
 
   /// @notice Initialize the Pyramid Game instance
@@ -65,17 +65,17 @@ contract PyramidGame is ERC20 {
   /// @param deployer The address that will receive the first leader NFT
   /// @param initialAmount The initial contribution amount for token 0
   /// @param colors Array of 4 hex color strings for the NFTs
-  function initialize(address deployer, uint256 initialAmount, string[4] memory colors, address uri) public {
+  function initialize(address deployer, uint256 initialAmount, string[4] memory colors) public {
     require(!initialized, "Already initialized");
     initialized = true;
-    leaders = new PyramidGameLeaders(deployer, SLOTS, initialAmount, colors, uri);
+    leaders = new PyramidGameLeaders(deployer, SLOTS, initialAmount, colors);
   }
 
 
   ////// CONTRIBUTIONS
 
   /// @notice View a participant's direct and indirect contributions
-  function contributions(address contributor) public view returns (uint256) {
+  function outstandingContributions(address contributor) public view returns (uint256) {
     return balanceOf(contributor) / TOKENS_PER_ETH;
   }
 
@@ -185,7 +185,7 @@ contract PyramidGame is ERC20 {
       leaders.mint(contributor, contributionAmount);
     } else {
       (uint256 tokenId, uint256 leaderAmount) = leaders.lowestLeader();
-      uint256 senderContributions = contributions(contributor) + contributionAmount;
+      uint256 senderContributions = outstandingContributions(contributor) + contributionAmount;
       if (senderContributions > leaderAmount) {
         _replaceLowestLeader(tokenId, contributor, leaderAmount, senderContributions);
       } else {
@@ -235,8 +235,7 @@ contract PyramidGame is ERC20 {
   /// @return clone The address of the newly deployed minimal proxy
   function deployChildPyramidGame(
     uint256 initialAmount,
-    string[4] memory colors,
-    address uriContract
+    string[4] memory colors
   ) external returns (address payable clone) {
     // Create EIP-1167 minimal proxy that delegates to this contract
     bytes20 targetBytes = bytes20(address(this));
@@ -260,7 +259,7 @@ contract PyramidGame is ERC20 {
 
     // Initialize the clone with custom parameters
     // The clone delegates to this contract's code but uses its own storage
-    PyramidGame(clone).initialize(msg.sender, initialAmount, colors, uriContract);
+    PyramidGame(clone).initialize(msg.sender, initialAmount, colors);
 
     children.push(clone);
     emit ChildPyramidDeployed(clone, msg.sender, initialAmount);
@@ -292,13 +291,12 @@ contract PyramidGameLeaders is ERC721 {
   uint256 public totalSupply = 1;
   uint256 public SLOTS;
   string[4] public colors;
-  ITokenURI public uri;
 
   mapping(uint256 => bool) public isReinvested;
   mapping(uint256 => address) public recipientOf;
   mapping(uint256 => uint256) public contributions;
 
-  constructor(address deployer, uint256 slots, uint256 initialAmount, string[4] memory _colors, address uri) ERC721("Pyramid Game Leader", "LEADER"){
+  constructor(address deployer, uint256 slots, uint256 initialAmount, string[4] memory _colors) ERC721("Pyramid Game Leader", "LEADER"){
     root = msg.sender;
     SLOTS = slots;
     colors = _colors;
@@ -398,27 +396,12 @@ contract PyramidGameLeaders is ERC721 {
   /// METADATA
 
   function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-    return uri.tokenURI(tokenId, address(this));
-  }
 
-
-  event MetadataUpdate(uint256 _tokenId);
-  event BatchMetadataUpdate(uint256 _fromTokenId, uint256 _toTokenId);
-
-  function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721) returns (bool) {
-    // ERC2981 & ERC4906
-    return interfaceId == bytes4(0x2a55205a) || interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
-  }
-}
-
-
-contract PyramidGameLeaderURI {
-  function tokenURI(uint256 tokenId, PyramidGameLeaders leaders) public view returns (string memory) {
     string memory tokenString = Strings.toString(tokenId);
 
     bytes memory encodedSVG = abi.encodePacked(
       'data:image/svg+xml;base64,',
-      Base64.encode(abi.encodePacked(rawSVG(tokenId, leaders)))
+      Base64.encode(abi.encodePacked(rawSVG(tokenId)))
     );
 
 
@@ -428,16 +411,16 @@ contract PyramidGameLeaderURI {
       '", "description": "'
       '", "license": "CC0'
       '", "image": "', encodedSVG,
-      '", "attributes": [{ "trait_type": "Leader Token Contributions", "value": "', Strings.toString(leaders.contributions(tokenId)), ' wei" }]'
+      '", "attributes": [{ "trait_type": "Leader Token Contributions", "value": "', Strings.toString(contributions[tokenId]), ' wei" }]'
       '}'
     ));
   }
 
-  function rawSVG(uint256 tokenId, PyramidGameLeaders leaders) public view returns (string memory) {
-    string memory color0 = leaders.colors(0);
-    string memory color1 = leaders.colors(1);
-    string memory color2 = leaders.colors(2);
-    string memory color3 = leaders.colors(3);
+  function rawSVG(uint256 tokenId) public view returns (string memory) {
+    string memory color0 = colors[0];
+    string memory color1 = colors[1];
+    string memory color2 = colors[2];
+    string memory color3 = colors[3];
 
     string[2][12] memory colorPairs = [
       [color0, color1],
@@ -469,4 +452,14 @@ contract PyramidGameLeaderURI {
     );
 
   }
+
+
+  event MetadataUpdate(uint256 _tokenId);
+  event BatchMetadataUpdate(uint256 _fromTokenId, uint256 _toTokenId);
+
+  function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721) returns (bool) {
+    // ERC2981 & ERC4906
+    return interfaceId == bytes4(0x2a55205a) || interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
+  }
+
 }

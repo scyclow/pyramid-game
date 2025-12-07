@@ -13,15 +13,11 @@ describe('PyramidGame Child Deployment', () => {
 
     const PyramidGameFactory = await ethers.getContractFactory('PyramidGame', signers[0])
     const PyramidGameLeadersFactory = await ethers.getContractFactory('PyramidGameLeaders', signers[0])
-    const PyramidGameLeaderURIFactory = await ethers.getContractFactory('PyramidGameLeaderURI', signers[0])
-
-    PyramidGameLeaderURI = await PyramidGameLeaderURIFactory.deploy()
-    await PyramidGameLeaderURI.deployed()
 
     const initialAmount = ethers.utils.parseEther('0.01')
     const colors = ['#000', '#46ff5a', '#283fff', '#ff1b1b']
 
-    PyramidGame = await PyramidGameFactory.deploy(initialAmount, colors, PyramidGameLeaderURI.address)
+    PyramidGame = await PyramidGameFactory.deploy(initialAmount, colors)
     await PyramidGame.deployed()
     PyramidGameLeaders = await PyramidGameLeadersFactory.attach(
       await PyramidGame.leaders()
@@ -100,9 +96,15 @@ describe('PyramidGame Child Deployment', () => {
       // Contribute to child
       await childPyramid.connect(signers[1]).contribute({ value: toETH(1) })
 
-      // Verify contribution was recorded
-      // Note: The child delegates to parent, so state is stored in child's storage
-      expect(await childPyramid.contributions(signers[1].address)).to.equal(toETH(1))
+      // Verify contribution was recorded in the leader NFT
+      const childLeadersAddress = await childPyramid.leaders()
+      const PyramidGameLeadersFactory = await ethers.getContractFactory('PyramidGameLeaders')
+      const childLeaders = PyramidGameLeadersFactory.attach(childLeadersAddress)
+
+      // signers[1] should now own token 1 (token 0 is signers[0] who deployed)
+      expect(await childLeaders.ownerOf(1)).to.equal(signers[1].address)
+      // The contribution amount should be exactly 1 ETH
+      expect(await childLeaders.contributions(1)).to.equal(toETH(1))
     })
   })
 })
