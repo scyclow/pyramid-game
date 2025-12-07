@@ -49,6 +49,7 @@ contract PyramidGame is ERC20 {
   uint256 constant public TOKENS_PER_ETH = 100_000;
 
   PyramidGameLeaders public leaders;
+  PyramidGameWallet public wallet;
   address[] public children;
   bool private initialized;
 
@@ -69,6 +70,7 @@ contract PyramidGame is ERC20 {
     require(!initialized, "Already initialized");
     initialized = true;
     leaders = new PyramidGameLeaders(deployer, SLOTS, initialAmount, colors);
+    wallet = new PyramidGameWallet(address(this), payable(address(leaders)));
   }
 
 
@@ -225,18 +227,14 @@ contract PyramidGame is ERC20 {
 
   ////// CHILD PYRAMID DEPLOYMENT
 
-  // TODO: deployChildPyramidGame should be payable. msg.value is used as initial amount,
-  // and that is used to go through the contribution work flow, with the child pyramid game as the caller
-
   /// @notice Deploy a minimal proxy clone of this Pyramid Game
   /// @dev Uses EIP-1167 minimal proxy pattern - the clone will delegate all calls to this contract's code
-  /// @param initialAmount The initial contribution amount for token 0 in the child pyramid
+  /// @dev msg.value is used to initialize the child's first leader and contribute to the parent pyramid
   /// @param colors Array of 4 hex color strings for the child pyramid's NFTs
   /// @return clone The address of the newly deployed minimal proxy
   function deployChildPyramidGame(
-    uint256 initialAmount,
     string[4] memory colors
-  ) external returns (address payable clone) {
+  ) external payable returns (address payable clone) {
     // Create EIP-1167 minimal proxy that delegates to this contract
     bytes20 targetBytes = bytes20(address(this));
     assembly {
@@ -257,12 +255,17 @@ contract PyramidGame is ERC20 {
     }
     require(clone != address(0), "Clone deployment failed");
 
-    // Initialize the clone with custom parameters
-    // The clone delegates to this contract's code but uses its own storage
-    PyramidGame(clone).initialize(msg.sender, initialAmount, colors);
+    require(msg.value > 0, 'Must send ETH to deploy child');
+
+    // Initialize the clone (it will create its own leaders and wallet)
+    PyramidGame(clone).initialize(msg.sender, msg.value, colors);
+
+    // Get child's wallet and have it contribute to parent
+    PyramidGameWallet childWallet = PyramidGame(clone).wallet();
+    childWallet.contributeToParent{value: msg.value}();
 
     children.push(clone);
-    emit ChildPyramidDeployed(clone, msg.sender, initialAmount);
+    emit ChildPyramidDeployed(clone, msg.sender, msg.value);
   }
 
   /// @notice Get the total number of child pyramids
@@ -271,13 +274,122 @@ contract PyramidGame is ERC20 {
     return children.length;
   }
 
-  // TODO: a majority of leaders can send an ERC20 or ERC721
+
+  ////// TOKEN REDIRECTION TO WALLET
+
+  /// @notice Redirect received ERC721 to wallet
+  function onERC721Received(address, address, uint256 tokenId, bytes calldata) external returns(bytes4) {
+    IERC721(msg.sender).transferFrom(address(this), address(wallet), tokenId);
+    return this.onERC721Received.selector;
+  }
+
+  /// @notice Sweep any ERC20 tokens to wallet
+  function sweepERC20(address token) external {
+    uint256 balance = IERC20(token).balanceOf(address(this));
+    if (balance > 0) {
+      IERC20(token).transfer(address(wallet), balance);
+    }
+  }
 
 }
 
 
-interface ITokenURI {
-  function tokenURI(uint256 tokenId, address leaders) external view returns (string memory);
+/// @title Pyramid Game Wallet
+/// @author steviep.eth
+/// @notice Wallet contract that executes transactions approved by majority of leaders
+contract PyramidGameWallet {
+  PyramidGame public pyramidGame;
+  PyramidGameLeaders public leaders;
+  uint8 public immutable SLOTS;
+
+  mapping(uint256 => bool) public nonceUsed;
+
+  event TransactionExecuted(address indexed target, uint256 nonce);
+
+  constructor(address _pyramidGame, address payable _leaders) {
+    pyramidGame = PyramidGame(payable(_pyramidGame));
+    leaders = PyramidGameLeaders(_leaders);
+    SLOTS = pyramidGame.SLOTS();
+  }
+
+
+  /// @notice Contribute to the parent pyramid on behalf of the child
+  /// @dev This allows the child pyramid's wallet to accumulate tokens in the parent
+  function contributeToParent() external payable {
+    pyramidGame.contribute{value: msg.value}();
+  }
+
+  /// @notice Execute a transaction if signed by majority of leaders
+  /// @param target The contract to call
+  /// @param value The ETH value to send with the call
+  /// @param data The call data
+  /// @param txNonce The nonce for this transaction
+  /// @param leaderTokenIds Array of leader token IDs voting
+  /// @param signatures Array of signatures from leader token owners (in same order as leaderTokenIds)
+  function executeLeaderTransaction(
+    address target,
+    uint256 value,
+    bytes calldata data,
+    uint256 txNonce,
+    uint256[] calldata leaderTokenIds,
+    bytes[] calldata signatures
+  ) external {
+    require(!nonceUsed[txNonce], 'Nonce already used');
+    require(leaderTokenIds.length == signatures.length, 'Array length mismatch');
+    require(leaderTokenIds.length > SLOTS / 2, 'Insufficient votes');
+
+    bytes32 messageHash = keccak256(abi.encode(target, value, data, txNonce));
+    bytes32 ethSignedMessageHash = keccak256(abi.encodePacked('\x19Ethereum Signed Message:\n32', messageHash));
+
+    // Verify each signature corresponds to the owner of the leader token
+    for (uint256 i = 0; i < leaderTokenIds.length; i++) {
+      address signer = recoverSigner(ethSignedMessageHash, signatures[i]);
+      require(leaders.ownerOf(leaderTokenIds[i]) == signer, 'Invalid signature');
+    }
+
+    nonceUsed[txNonce] = true;
+
+    (bool success, ) = target.call{value: value}(data);
+    require(success, 'Transaction failed');
+
+    emit TransactionExecuted(target, txNonce);
+  }
+
+  /// @dev Recover signer from signature
+  function recoverSigner(bytes32 ethSignedMessageHash, bytes memory signature) internal pure returns (address) {
+    require(signature.length == 65, 'Invalid signature length');
+
+    bytes32 r;
+    bytes32 s;
+    uint8 v;
+
+    assembly {
+      r := mload(add(signature, 32))
+      s := mload(add(signature, 64))
+      v := byte(0, mload(add(signature, 96)))
+    }
+
+    return ecrecover(ethSignedMessageHash, v, r, s);
+  }
+
+
+  // BOILERPLATE
+
+
+  receive() external payable {}
+  fallback() external payable {}
+
+  function onERC721Received(address, address, uint256, bytes calldata) external pure returns(bytes4) {
+    return this.onERC721Received.selector;
+  }
+
+  function onERC1155Received(address, address, uint256, uint256, bytes calldata) external pure returns (bytes4) {
+    return this.onERC1155Received.selector;
+  }
+
+  function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata) external pure returns (bytes4) {
+    return this.onERC1155BatchReceived.selector;
+  }
 }
 
 
@@ -440,7 +552,7 @@ contract PyramidGameLeaders is ERC721 {
       [color2, color3]
     ];
 
-// TODO put some indication that token is reinvested
+    // TODO put some indication that token is reinvested
     return string.concat(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 487 487">'
         '<style>*{stroke:', colorPairs[tokenId][0],';fill:', colorPairs[tokenId][1],'}</style>'

@@ -29,14 +29,13 @@ describe('PyramidGame Child Deployment', () => {
 
   describe('deployChildPyramidGame', () => {
     it('deploys a minimal proxy clone', async () => {
-      const initialAmount = toETH(0.05)
       const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00']
 
       // Check initial state
       expect(await PyramidGame.totalChildren()).to.equal(0)
 
-      // Deploy child
-      const tx = await PG(signers[1]).deployChildPyramidGame(initialAmount, colors)
+      // Deploy child with ETH
+      const tx = await PG(signers[1]).deployChildPyramidGame(colors, { value: toETH(0.05) })
       const receipt = await tx.wait()
 
       // Check event was emitted
@@ -52,19 +51,18 @@ describe('PyramidGame Child Deployment', () => {
     })
 
     it('deploys multiple children and tracks them all', async () => {
-      const initialAmount = toETH(0.01)
       const colors = ['#000', '#46ff5a', '#283fff', '#ff1b1b']
 
       // Deploy three children
-      const tx1 = await PG(signers[0]).deployChildPyramidGame(initialAmount, colors)
+      const tx1 = await PG(signers[0]).deployChildPyramidGame(colors, { value: toETH(0.01) })
       const receipt1 = await tx1.wait()
       const child1 = receipt1.events.find(e => e.event === 'ChildPyramidDeployed').args.childAddress
 
-      const tx2 = await PG(signers[1]).deployChildPyramidGame(initialAmount, colors)
+      const tx2 = await PG(signers[1]).deployChildPyramidGame(colors, { value: toETH(0.01) })
       const receipt2 = await tx2.wait()
       const child2 = receipt2.events.find(e => e.event === 'ChildPyramidDeployed').args.childAddress
 
-      const tx3 = await PG(signers[2]).deployChildPyramidGame(initialAmount, colors)
+      const tx3 = await PG(signers[2]).deployChildPyramidGame(colors, { value: toETH(0.01) })
       const receipt3 = await tx3.wait()
       const child3 = receipt3.events.find(e => e.event === 'ChildPyramidDeployed').args.childAddress
 
@@ -80,31 +78,28 @@ describe('PyramidGame Child Deployment', () => {
       expect(child1).to.not.equal(child3)
     })
 
-    it('child clones can receive contributions', async () => {
-      const initialAmount = toETH(0.01)
+    it('child wallet receives parent tokens when deployed with ETH', async () => {
       const colors = ['#000', '#46ff5a', '#283fff', '#ff1b1b']
 
-      // Deploy child
-      const tx = await PG(signers[0]).deployChildPyramidGame(initialAmount, colors)
+      // Deploy child with ETH - this initializes child AND contributes to parent
+      const tx = await PG(signers[0]).deployChildPyramidGame(colors, { value: toETH(1) })
       const receipt = await tx.wait()
       const childAddress = receipt.events.find(e => e.event === 'ChildPyramidDeployed').args.childAddress
 
-      // Connect to child as PyramidGame
+      // Connect to child
       const PyramidGameFactory = await ethers.getContractFactory('PyramidGame')
       const childPyramid = PyramidGameFactory.attach(childAddress)
 
-      // Contribute to child
-      await childPyramid.connect(signers[1]).contribute({ value: toETH(1) })
+      // Get child's wallet
+      const childWalletAddress = await childPyramid.wallet()
 
-      // Verify contribution was recorded in the leader NFT
-      const childLeadersAddress = await childPyramid.leaders()
+      // Check that child's wallet has tokens/NFT in the parent (this PyramidGame)
+      const parentLeadersAddress = await PyramidGame.leaders()
       const PyramidGameLeadersFactory = await ethers.getContractFactory('PyramidGameLeaders')
-      const childLeaders = PyramidGameLeadersFactory.attach(childLeadersAddress)
+      const parentLeaders = PyramidGameLeadersFactory.attach(parentLeadersAddress)
 
-      // signers[1] should now own token 1 (token 0 is signers[0] who deployed)
-      expect(await childLeaders.ownerOf(1)).to.equal(signers[1].address)
-      // The contribution amount should be exactly 1 ETH
-      expect(await childLeaders.contributions(1)).to.equal(toETH(1))
+      // Child wallet should own a leader token in parent (since 1 ETH > 0.01 ETH initial)
+      expect(await parentLeaders.balanceOf(childWalletAddress)).to.be.greaterThan(0)
     })
   })
 })
