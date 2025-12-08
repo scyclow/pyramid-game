@@ -109,9 +109,7 @@ contract PyramidGame is ERC20 {
   /// @dev Force a distribution if the contract accrues a balance. This may occur if
   /// distributions are directly or indirectly forwarded back to the contract.
   function forceDistribution() external ignoreReentry {
-    uint256 contributionTotal = leaders.contributionTotal();
-    uint256 reinvestedTotal = leaders.reinvestedTotal();
-    _distribute(address(this).balance, contributionTotal, reinvestedTotal);
+    _distribute(address(this).balance);
   }
 
 
@@ -125,11 +123,7 @@ contract PyramidGame is ERC20 {
   /// contributions. Any balance accrued by the contract from failed reentries can be manually
   /// distributed through `forceDistribution`.
   function _contribute() internal ignoreReentry {
-    uint256 contributionTotal = leaders.contributionTotal();
-    uint256 reinvestedTotal = leaders.reinvestedTotal();
-
-    uint8 senderIsLeaderTokenId = _distribute(msg.value, contributionTotal, reinvestedTotal);
-    _reinvest(msg.value, contributionTotal, reinvestedTotal);
+    uint8 senderIsLeaderTokenId = _distribute(msg.value);
 
     if (senderIsLeaderTokenId != INVALID_SLOT) {
       leaders.incrementContributionBalance(uint256(senderIsLeaderTokenId), msg.value);
@@ -143,9 +137,9 @@ contract PyramidGame is ERC20 {
 
   /// @dev Given the cached Leaders: calculate the total contribution amounts, determine each
   /// Leader's percentage of the sum, and distribute the original contribution proportionally.
-  function _distribute(uint256 amount, uint256 contributionTotal, uint256 reinvestedTotal) internal returns (uint8) {
+  function _distribute(uint256 amount) internal returns (uint8) {
     uint8 senderIsLeaderTokenId = INVALID_SLOT;
-    uint256 totalPayoutShares = contributionTotal - reinvestedTotal;
+    uint256 contributionTotal = leaders.contributionTotal();
 
     for (uint8 ix; ix < SLOTS; ix++) {
       if (!leaders.exists(ix)) return senderIsLeaderTokenId;
@@ -153,9 +147,7 @@ contract PyramidGame is ERC20 {
         senderIsLeaderTokenId = ix;
       }
 
-      if (leaders.isReinvested(ix)) continue;
-
-      uint256 amountToTransfer = (amount * leaders.contributions(ix)) / totalPayoutShares;
+      uint256 amountToTransfer = (amount * leaders.contributions(ix)) / contributionTotal;
       address recipient = leaders.recipientOf(ix);
 
       bool distributionSuccessful =  _safeTransferETH(recipient, amountToTransfer);
@@ -168,18 +160,6 @@ contract PyramidGame is ERC20 {
     return senderIsLeaderTokenId;
   }
 
-  function _reinvest(uint256 amount, uint256 contributionTotal, uint256 reinvestedTotal) internal {
-    if (reinvestedTotal == 0) return;
-
-    uint256 denominator = contributionTotal > reinvestedTotal ? contributionTotal - reinvestedTotal : contributionTotal;
-
-    for (uint8 ix; ix < SLOTS; ix++) {
-      if (leaders.isReinvested(ix)) {
-        uint256 amountToIncrease = (amount * leaders.contributions(ix)) / denominator;
-        leaders.incrementContributionBalance(ix, amountToIncrease);
-      }
-    }
-  }
 
   /// @dev After the distribution has been made, recalculate the leaderboard.
   function _reorg(address contributor, uint256 contributionAmount) internal {
@@ -399,12 +379,10 @@ contract PyramidGameWallet {
 contract PyramidGameLeaders is ERC721 {
   address public root;
   uint256 public contributionTotal;
-  uint256 public reinvestedTotal;
   uint256 public totalSupply = 1;
   uint256 public SLOTS;
   string[4] public colors;
 
-  mapping(uint256 => bool) public isReinvested;
   mapping(uint256 => address) public recipientOf;
   mapping(uint256 => uint256) public contributions;
 
@@ -458,24 +436,6 @@ contract PyramidGameLeaders is ERC721 {
   }
 
 
-
-  /// REINVEST
-
-  function setReinvestment(uint256 tokenId, bool reinvestmentStatus) external {
-    require(ownerOf(tokenId) == msg.sender, 'Only token owner can perform this action');
-
-    if (reinvestmentStatus == isReinvested[tokenId]) return;
-    else if (reinvestmentStatus) {
-      reinvestedTotal += contributions[tokenId];
-    } else {
-      reinvestedTotal -= contributions[tokenId];
-    }
-
-    isReinvested[tokenId] = reinvestmentStatus;
-  }
-
-
-
   /// ONLY THE PYRAMID GAME CONTRACT CAN TAKE THESE ACTIONS
 
   modifier onlyRoot {
@@ -486,9 +446,7 @@ contract PyramidGameLeaders is ERC721 {
   function incrementContributionBalance(uint256 tokenId, uint256 incrementAmount) public onlyRoot {
     contributions[tokenId] += incrementAmount;
     contributionTotal += incrementAmount;
-    if (isReinvested[tokenId]) {
-      reinvestedTotal += incrementAmount;
-    }
+
     emit MetadataUpdate(tokenId);
   }
 
@@ -552,7 +510,7 @@ contract PyramidGameLeaders is ERC721 {
       [color2, color3]
     ];
 
-    // TODO put some indication that token is reinvested
+
     return string.concat(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 487 487">'
         '<style>*{stroke:', colorPairs[tokenId][0],';fill:', colorPairs[tokenId][1],'}</style>'
