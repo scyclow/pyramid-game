@@ -69,9 +69,8 @@ describe('PyramidGame', () => {
     const PyramidGameLeadersFactory = await ethers.getContractFactory('PyramidGameLeaders', signers[0])
 
     const initialAmount = ethers.utils.parseEther('0.01')
-    const colors = ['#000', '#46ff5a', '#283fff', '#ff1b1b']
 
-    PyramidGame = await PyramidGameFactory.deploy(initialAmount, colors)
+    PyramidGame = await PyramidGameFactory.deploy({ value: initialAmount })
     await PyramidGame.deployed()
     PyramidGameLeaders = await PyramidGameLeadersFactory.attach(
       await PyramidGame.leaders()
@@ -429,24 +428,373 @@ describe('PyramidGame', () => {
       await PGL(signers[0]).setRecipient(0, ReinvestTest.address)
 
 
-      await PG(signers[1]).contribute(txValue(0.01))
+      await PG(signers[1]).contribute(txValue(0.05))
 
       expect(await getBalance(ReinvestTest)).to.equal(0)
-      expect(await getBalance(PyramidGame)).to.equal(0.01)
+      expect(await getBalance(PyramidGame)).to.equal(0.05)
 
       const signer0b4 = await getBalance(signers[0])
       const signer1b4 = await getBalance(signers[1])
 
       await PG(signers[2]).forceDistribution()
 
-      expect(await getBalance(signers[1])).to.be.closeTo(signer1b4 + 0.005, 0.00000000001)
-      expect(await getBalance(PyramidGame)).to.equal(0.005)
+      // Token 0 has 0.01 contribution (from initialization)
+      // Token 1 has 0.05 contribution (from signers[1])
+      // Total contributions: 0.06
+      // Token 1's share of 0.05 ETH distribution: 0.05 * (0.05/0.06) = 0.0417 ETH
+      const expectedGain = 0.05 * (5/6)
+      expect(await getBalance(signers[1])).to.be.closeTo(signer1b4 + expectedGain, 0.00000000001)
+
+      // Remaining balance should be token 0's share: 0.05 * (0.01/0.06) = 0.00833...
+      expect(await getBalance(PyramidGame)).to.be.closeTo(0.05 * (1/6), 0.00000000001)
 
 
     })
 
+    it('deployer gets their ETH back (minus gas) after deployment', async () => {
+      const deployer = signers[10]
+      const initialAmount = ethers.utils.parseEther('1')
+
+      const balanceBefore = await getBalance(deployer)
+
+      const PyramidGameFactory = await ethers.getContractFactory('PyramidGame', deployer)
+      const testPyramidGame = await PyramidGameFactory.deploy({ value: initialAmount })
+      await testPyramidGame.deployed()
+
+      const balanceAfter = await getBalance(deployer)
+
+      // Deployer should have roughly the same balance (within 0.01 ETH for gas costs)
+      // They send 1 ETH but get it back from the wallet
+      expect(balanceAfter).to.be.closeTo(balanceBefore, 0.01)
+    })
+
     // TODO check contributions, forwards, commits permissions + delegations
 
+  })
+
+  describe('wallet multisig', () => {
+    it('leaders can collectively update URI contract, but not individually', async () => {
+      // Create multiple leaders by having people contribute
+      await PG(signers[1]).contribute(txValue(0.1))
+      await PG(signers[2]).contribute(txValue(0.2))
+      await PG(signers[3]).contribute(txValue(0.3))
+      await PG(signers[4]).contribute(txValue(0.4))
+      await PG(signers[5]).contribute(txValue(0.5))
+      await PG(signers[6]).contribute(txValue(0.6))
+      await PG(signers[7]).contribute(txValue(0.7))
+
+      // Deploy a new TokenURI contract to use as the new URI
+      const TokenURIFactory = await ethers.getContractFactory('TokenURI', signers[0])
+      const newURI = await TokenURIFactory.deploy()
+      await newURI.deployed()
+
+      // Get the current URI to verify it changes
+      const oldURI = await PyramidGameLeaders.uri()
+      expect(oldURI).to.not.equal(newURI.address)
+
+      // Test 1: Single leader cannot update URI directly
+      await expect(
+        PGL(signers[0]).updateURI(newURI.address)
+      ).to.be.revertedWith('Only the root wallet can perform this action')
+
+      // Test 2: Leaders can collectively update URI through wallet
+      const wallet = await PyramidGame.wallet()
+
+      // Prepare the transaction data
+      const target = PyramidGameLeaders.address
+      const value = 0
+      const data = PyramidGameLeaders.interface.encodeFunctionData('updateURI', [newURI.address])
+      const txNonce = 1
+
+      // Create message hash (same as in the contract using abi.encode)
+      const messageHash = ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(
+          ['address', 'uint256', 'bytes', 'uint256'],
+          [target, value, data, txNonce]
+        )
+      )
+
+      // Get 7 leaders to sign (majority of 12 is 7)
+      const leaderTokenIds = [0, 1, 2, 3, 4, 5, 6]
+      const signatures = []
+
+      for (let i = 0; i < leaderTokenIds.length; i++) {
+        const tokenId = leaderTokenIds[i]
+        const owner = await PyramidGameLeaders.ownerOf(tokenId)
+        const signer = signers.find(s => s.address === owner)
+
+        // signMessage automatically adds the Ethereum prefix
+        const signature = await signer.signMessage(ethers.utils.arrayify(messageHash))
+        signatures.push(signature)
+      }
+
+      // Execute the transaction through the wallet
+      const PyramidGameWallet = await ethers.getContractAt('PyramidGameWallet', wallet)
+      await PyramidGameWallet.executeLeaderTransaction(
+        target,
+        value,
+        data,
+        txNonce,
+        leaderTokenIds,
+        signatures
+      )
+
+      // Verify the URI was updated
+      const updatedURI = await PyramidGameLeaders.uri()
+      expect(updatedURI).to.equal(newURI.address)
+    })
+
+    it('reverts when insufficient leaders sign (only 6 out of 12)', async () => {
+      // Create multiple leaders by having people contribute
+      await PG(signers[1]).contribute(txValue(0.1))
+      await PG(signers[2]).contribute(txValue(0.2))
+      await PG(signers[3]).contribute(txValue(0.3))
+      await PG(signers[4]).contribute(txValue(0.4))
+      await PG(signers[5]).contribute(txValue(0.5))
+      await PG(signers[6]).contribute(txValue(0.6))
+
+      // Deploy a new TokenURI contract to use as the new URI
+      const TokenURIFactory = await ethers.getContractFactory('TokenURI', signers[0])
+      const newURI = await TokenURIFactory.deploy()
+      await newURI.deployed()
+
+      const wallet = await PyramidGame.wallet()
+
+      // Prepare the transaction data
+      const target = PyramidGameLeaders.address
+      const value = 0
+      const data = PyramidGameLeaders.interface.encodeFunctionData('updateURI', [newURI.address])
+      const txNonce = 2
+
+      // Create message hash
+      const messageHash = ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(
+          ['address', 'uint256', 'bytes', 'uint256'],
+          [target, value, data, txNonce]
+        )
+      )
+
+      // Get only 6 leaders to sign (insufficient - need 7 for majority)
+      const leaderTokenIds = [0, 1, 2, 3, 4, 5]
+      const signatures = []
+
+      for (let i = 0; i < leaderTokenIds.length; i++) {
+        const tokenId = leaderTokenIds[i]
+        const owner = await PyramidGameLeaders.ownerOf(tokenId)
+        const signer = signers.find(s => s.address === owner)
+
+        const signature = await signer.signMessage(ethers.utils.arrayify(messageHash))
+        signatures.push(signature)
+      }
+
+      // Execute should fail with insufficient votes
+      const PyramidGameWallet = await ethers.getContractAt('PyramidGameWallet', wallet)
+      await expect(
+        PyramidGameWallet.executeLeaderTransaction(
+          target,
+          value,
+          data,
+          txNonce,
+          leaderTokenIds,
+          signatures
+        )
+      ).to.be.revertedWith('Insufficient votes')
+    })
+
+    it('first participant cannot update wallet, but majority can, and new wallet can update URI', async () => {
+      // Create multiple leaders
+      await PG(signers[1]).contribute(txValue(0.1))
+      await PG(signers[2]).contribute(txValue(0.2))
+      await PG(signers[3]).contribute(txValue(0.3))
+      await PG(signers[4]).contribute(txValue(0.4))
+      await PG(signers[5]).contribute(txValue(0.5))
+      await PG(signers[6]).contribute(txValue(0.6))
+
+      // Get current wallet
+      const oldWallet = await PyramidGame.wallet()
+
+      // Test 1: First participant (signers[0]) cannot directly call updateWallet
+      await expect(
+        PG(signers[0]).updateWallet(signers[0].address)
+      ).to.be.revertedWith('Only the wallet can perform this action')
+
+      // Test 2: Deploy a new wallet contract to use as the new wallet
+      const PyramidGameWalletFactory = await ethers.getContractFactory('PyramidGameWallet', signers[0])
+      const newWallet = await PyramidGameWalletFactory.deploy(
+        12, // SLOTS
+        PyramidGame.address,
+        PyramidGameLeaders.address,
+        signers[0].address // parent - just use signers[0] for testing
+      )
+      await newWallet.deployed()
+
+      // Prepare the transaction to update the wallet
+      const target = PyramidGame.address
+      const value = 0
+      const data = PyramidGame.interface.encodeFunctionData('updateWallet', [newWallet.address])
+      const txNonce = 3
+
+      // Create message hash
+      const messageHash = ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(
+          ['address', 'uint256', 'bytes', 'uint256'],
+          [target, value, data, txNonce]
+        )
+      )
+
+      // Get 7 leaders to sign (majority)
+      const leaderTokenIds = [0, 1, 2, 3, 4, 5, 6]
+      const signatures = []
+
+      for (let i = 0; i < leaderTokenIds.length; i++) {
+        const tokenId = leaderTokenIds[i]
+        const owner = await PyramidGameLeaders.ownerOf(tokenId)
+        const signer = signers.find(s => s.address === owner)
+
+        const signature = await signer.signMessage(ethers.utils.arrayify(messageHash))
+        signatures.push(signature)
+      }
+
+      // Execute the transaction through the old wallet
+      const PyramidGameWallet = await ethers.getContractAt('PyramidGameWallet', oldWallet)
+      await PyramidGameWallet.executeLeaderTransaction(
+        target,
+        value,
+        data,
+        txNonce,
+        leaderTokenIds,
+        signatures
+      )
+
+      // Verify the wallet was updated
+      const updatedWallet = await PyramidGame.wallet()
+      expect(updatedWallet).to.equal(newWallet.address)
+      expect(updatedWallet).to.not.equal(oldWallet)
+
+      // Test 3: New wallet can successfully update the URI contract
+      const TokenURIFactory = await ethers.getContractFactory('TokenURI', signers[0])
+      const newURI = await TokenURIFactory.deploy()
+      await newURI.deployed()
+
+      const oldURI = await PyramidGameLeaders.uri()
+
+      // Prepare transaction to update URI using the new wallet
+      const uriTarget = PyramidGameLeaders.address
+      const uriValue = 0
+      const uriData = PyramidGameLeaders.interface.encodeFunctionData('updateURI', [newURI.address])
+      const uriTxNonce = 1 // New wallet has its own nonce counter
+
+      // Create message hash for URI update
+      const uriMessageHash = ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(
+          ['address', 'uint256', 'bytes', 'uint256'],
+          [uriTarget, uriValue, uriData, uriTxNonce]
+        )
+      )
+
+      // Get signatures from the same 7 leaders
+      const uriSignatures = []
+      for (let i = 0; i < leaderTokenIds.length; i++) {
+        const tokenId = leaderTokenIds[i]
+        const owner = await PyramidGameLeaders.ownerOf(tokenId)
+        const signer = signers.find(s => s.address === owner)
+
+        const signature = await signer.signMessage(ethers.utils.arrayify(uriMessageHash))
+        uriSignatures.push(signature)
+      }
+
+      // Execute through the NEW wallet
+      await newWallet.executeLeaderTransaction(
+        uriTarget,
+        uriValue,
+        uriData,
+        uriTxNonce,
+        leaderTokenIds,
+        uriSignatures
+      )
+
+      // Verify URI was updated by the new wallet
+      const finalURI = await PyramidGameLeaders.uri()
+      expect(finalURI).to.equal(newURI.address)
+      expect(finalURI).to.not.equal(oldURI)
+    })
+  })
+
+  describe('distribute()', () => {
+    it('distributes ETH proportionally without updating contribution balances', async () => {
+      // Setup: Create 3 leaders with different contributions
+      await PG(signers[0]).contribute(txValue(0.99))
+      await PG(signers[1]).contribute(txValue(0.5))
+      await PG(signers[2]).contribute(txValue(0.25))
+
+      // Verify initial contributions
+      expect(ethVal(await PGL(signers[0]).contributions(0))).to.be.closeTo(1, 0.000001)
+      expect(ethVal(await PGL(signers[0]).contributions(1))).to.be.closeTo(0.5, 0.000001)
+      expect(ethVal(await PGL(signers[0]).contributions(2))).to.be.closeTo(0.25, 0.000001)
+      expect(ethVal(await PGL(signers[0]).contributionTotal())).to.be.closeTo(1.75, 0.000001)
+
+      // Record balances before distribution
+      const balances = {}
+      for (let i = 0; i < 3; i++) {
+        balances[i] = await getBalance(signers[i])
+      }
+
+      // Someone calls distribute with 1 ETH
+      await PG(signers[10]).distribute(txValue(1))
+
+      // Calculate expected distributions (proportional to contributions)
+      const totalContributions = 1.75
+      const distribution = 1
+      const expected = {
+        0: (1 / totalContributions) * distribution,
+        1: (0.5 / totalContributions) * distribution,
+        2: (0.25 / totalContributions) * distribution
+      }
+
+      // Verify ETH was distributed proportionally
+      expect(await getBalance(signers[0]) - balances[0]).to.be.closeTo(expected[0], 0.0001)
+      expect(await getBalance(signers[1]) - balances[1]).to.be.closeTo(expected[1], 0.0001)
+      expect(await getBalance(signers[2]) - balances[2]).to.be.closeTo(expected[2], 0.0001)
+
+      // Verify contribution balances are UNCHANGED
+      expect(ethVal(await PGL(signers[0]).contributions(0))).to.be.closeTo(1, 0.000001)
+      expect(ethVal(await PGL(signers[0]).contributions(1))).to.be.closeTo(0.5, 0.000001)
+      expect(ethVal(await PGL(signers[0]).contributions(2))).to.be.closeTo(0.25, 0.000001)
+      expect(ethVal(await PGL(signers[0]).contributionTotal())).to.be.closeTo(1.75, 0.000001)
+
+      // Verify total supply unchanged (no new leaders)
+      expect(num(await PGL(signers[0]).totalSupply())).to.equal(3)
+
+      // Verify contract has no remaining balance
+      expect(await getBalance(PyramidGame)).to.be.closeTo(0, 0.000001)
+    })
+
+    it('distributes to full leaderboard correctly', async () => {
+      // Setup: Create 12 leaders
+      await PG(signers[0]).contribute(txValue(0.99))
+      for (let i = 1; i < 12; i++) {
+        await PG(signers[i]).contribute(txValue(0.1))
+      }
+
+      const totalContributions = 2.1 // 1.0 (signer 0: 0.01 initial + 0.99) + 1.1 (11 signers × 0.1)
+      expect(ethVal(await PGL(signers[0]).contributionTotal())).to.be.closeTo(totalContributions, 0.000001)
+
+      // Record balances before distribution
+      const balances = {}
+      for (let i = 0; i < 12; i++) {
+        balances[i] = await getBalance(signers[i])
+      }
+
+      // Distribute 2 ETH
+      await PG(signers[15]).distribute(txValue(2))
+
+      // Verify distributions
+      expect(await getBalance(signers[0]) - balances[0]).to.be.closeTo((1 / totalContributions) * 2, 0.0001)
+      expect(await getBalance(signers[1]) - balances[1]).to.be.closeTo((0.1 / totalContributions) * 2, 0.0001)
+
+      // Verify contribution balances unchanged
+      expect(ethVal(await PGL(signers[0]).contributionTotal())).to.be.closeTo(totalContributions, 0.000001)
+    })
   })
 
 

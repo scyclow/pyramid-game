@@ -51,26 +51,27 @@ contract PyramidGame is ERC20 {
   PyramidGameLeaders public leaders;
   PyramidGameWallet public wallet;
   address[] public children;
+  address public parent;
   bool private initialized;
 
   event Contribution(address indexed sender, uint256 amount);
   event Distribution(address indexed recipient, uint256 amount);
   event ChildPyramidDeployed(address indexed childAddress, address indexed deployer, uint256 initialAmount);
 
-  constructor(uint256 initialAmount, string[4] memory colors) ERC20("Pyramid Game", "PYRAMID") {
-    initialize(msg.sender, initialAmount, colors);
+  constructor() payable ERC20("Pyramid Game", "PYRAMID") {
+    initialize(msg.sender);
   }
 
   /// @notice Initialize the Pyramid Game instance
   /// @dev Can only be called once. Called by constructor for normal deployments, or manually for proxy clones
   /// @param deployer The address that will receive the first leader NFT
-  /// @param initialAmount The initial contribution amount for token 0
-  /// @param colors Array of 4 hex color strings for the NFTs
-  function initialize(address deployer, uint256 initialAmount, string[4] memory colors) public {
+  function initialize(address deployer) public payable {
+    require(msg.value > 0, 'Must include a starting bid');
     require(!initialized, "Already initialized");
     initialized = true;
-    leaders = new PyramidGameLeaders(deployer, SLOTS, initialAmount, colors);
-    wallet = new PyramidGameWallet(address(this), payable(address(leaders)));
+    parent = msg.sender;
+    leaders = new PyramidGameLeaders(deployer, SLOTS, msg.value);
+    wallet = new PyramidGameWallet{value: msg.value}(SLOTS, address(this), address(leaders), payable(msg.sender));
   }
 
 
@@ -110,6 +111,11 @@ contract PyramidGame is ERC20 {
   /// distributions are directly or indirectly forwarded back to the contract.
   function forceDistribution() external ignoreReentry {
     _distribute(address(this).balance);
+  }
+
+  /// @notice Distribute ETH to leaders proportionally without updating contribution balances.
+  function distribute() external payable ignoreReentry {
+    _distribute(msg.value);
   }
 
 
@@ -210,11 +216,8 @@ contract PyramidGame is ERC20 {
   /// @notice Deploy a minimal proxy clone of this Pyramid Game
   /// @dev Uses EIP-1167 minimal proxy pattern - the clone will delegate all calls to this contract's code
   /// @dev msg.value is used to initialize the child's first leader and contribute to the parent pyramid
-  /// @param colors Array of 4 hex color strings for the child pyramid's NFTs
   /// @return clone The address of the newly deployed minimal proxy
-  function deployChildPyramidGame(
-    string[4] memory colors
-  ) external payable returns (address payable clone) {
+  function deployChildPyramidGame() external payable returns (address payable clone) {
     // Create EIP-1167 minimal proxy that delegates to this contract
     bytes20 targetBytes = bytes20(address(this));
     assembly {
@@ -238,11 +241,7 @@ contract PyramidGame is ERC20 {
     require(msg.value > 0, 'Must send ETH to deploy child');
 
     // Initialize the clone (it will create its own leaders and wallet)
-    PyramidGame(clone).initialize(msg.sender, msg.value, colors);
-
-    // Get child's wallet and have it contribute to parent
-    PyramidGameWallet childWallet = PyramidGame(clone).wallet();
-    childWallet.contributeToParent{value: msg.value}();
+    PyramidGame(clone).initialize{value: msg.value}(msg.sender);
 
     children.push(clone);
     emit ChildPyramidDeployed(clone, msg.sender, msg.value);
@@ -271,6 +270,11 @@ contract PyramidGame is ERC20 {
     }
   }
 
+  function updateWallet(PyramidGameWallet newWallet) external {
+    require(msg.sender == address(wallet), 'Only the wallet can perform this action');
+    wallet = newWallet;
+  }
+
 }
 
 
@@ -284,20 +288,19 @@ contract PyramidGameWallet {
 
   mapping(uint256 => bool) public nonceUsed;
 
-  event TransactionExecuted(address indexed target, uint256 nonce);
+  constructor(uint8 _slots, address pgAddr, address leaderAddr, address payable parentAddr) payable {
+    pyramidGame = PyramidGame(payable(pgAddr));
+    leaders = PyramidGameLeaders(payable(leaderAddr));
+    SLOTS = _slots;
 
-  constructor(address _pyramidGame, address payable _leaders) {
-    pyramidGame = PyramidGame(payable(_pyramidGame));
-    leaders = PyramidGameLeaders(_leaders);
-    SLOTS = pyramidGame.SLOTS();
+    // Transfer ETH to parent
+    if (msg.value > 0) {
+      (bool success,) = parentAddr.call{value: msg.value}('');
+      require(success, 'Transfer to parent failed');
+    }
   }
 
 
-  /// @notice Contribute to the parent pyramid on behalf of the child
-  /// @dev This allows the child pyramid's wallet to accumulate tokens in the parent
-  function contributeToParent() external payable {
-    pyramidGame.contribute{value: msg.value}();
-  }
 
   /// @notice Execute a transaction if signed by majority of leaders
   /// @param target The contract to call
@@ -331,9 +334,8 @@ contract PyramidGameWallet {
 
     (bool success, ) = target.call{value: value}(data);
     require(success, 'Transaction failed');
-
-    emit TransactionExecuted(target, txNonce);
   }
+
 
   /// @dev Recover signer from signature
   function recoverSigner(bytes32 ethSignedMessageHash, bytes memory signature) internal pure returns (address) {
@@ -380,16 +382,16 @@ contract PyramidGameLeaders is ERC721 {
   address public root;
   uint256 public contributionTotal;
   uint256 public totalSupply = 1;
-  uint256 public SLOTS;
-  string[4] public colors;
+  uint256 public immutable SLOTS;
+  TokenURI public uri;
 
   mapping(uint256 => address) public recipientOf;
   mapping(uint256 => uint256) public contributions;
 
-  constructor(address deployer, uint256 slots, uint256 initialAmount, string[4] memory _colors) ERC721("Pyramid Game Leader", "LEADER"){
+  constructor(address deployer, uint256 slots, uint256 initialAmount) ERC721("Pyramid Game Leader", "LEADER") {
     root = msg.sender;
     SLOTS = slots;
-    colors = _colors;
+    uri = new TokenURI();
 
     _mint(deployer, 0);
     incrementContributionBalance(0, initialAmount);
@@ -466,7 +468,33 @@ contract PyramidGameLeaders is ERC721 {
   /// METADATA
 
   function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    return uri.tokenURI(tokenId);
+  }
 
+  function updateURI(address newURI) external {
+    require(msg.sender == address(PyramidGame(payable(root)).wallet()), 'Only the root wallet can perform this action');
+    uri = TokenURI(newURI);
+    emit BatchMetadataUpdate(0, SLOTS);
+  }
+
+
+  event MetadataUpdate(uint256 _tokenId);
+  event BatchMetadataUpdate(uint256 _fromTokenId, uint256 _toTokenId);
+
+  function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721) returns (bool) {
+    // ERC2981 & ERC4906
+    return interfaceId == bytes4(0x2a55205a) || interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
+  }
+
+}
+
+contract TokenURI {
+  PyramidGameLeaders public leaders;
+  constructor() {
+    leaders = PyramidGameLeaders(payable(msg.sender));
+  }
+
+  function tokenURI(uint256 tokenId) public view returns (string memory) {
     string memory tokenString = Strings.toString(tokenId);
 
     bytes memory encodedSVG = abi.encodePacked(
@@ -474,23 +502,22 @@ contract PyramidGameLeaders is ERC721 {
       Base64.encode(abi.encodePacked(rawSVG(tokenId)))
     );
 
-
     return string(abi.encodePacked(
       'data:application/json;utf8,'
-      '{"name": "Pyramid Game: Leader #', tokenString,
+      '{"name": "', leaders.name(),' #', tokenString,
       '", "description": "'
       '", "license": "CC0'
       '", "image": "', encodedSVG,
-      '", "attributes": [{ "trait_type": "Leader Token Contributions", "value": "', Strings.toString(contributions[tokenId]), ' wei" }]'
+      '", "attributes": [{ "trait_type": "Leader Token Contributions", "value": "', Strings.toString(leaders.contributions(tokenId)), ' wei" }]'
       '}'
     ));
   }
 
   function rawSVG(uint256 tokenId) public view returns (string memory) {
-    string memory color0 = colors[0];
-    string memory color1 = colors[1];
-    string memory color2 = colors[2];
-    string memory color3 = colors[3];
+    string memory color0 = '#000';
+    string memory color1 = '#46ff5a';
+    string memory color2 = '#283fff';
+    string memory color3 = '#ff1b1b';
 
     string[2][12] memory colorPairs = [
       [color0, color1],
@@ -510,10 +537,12 @@ contract PyramidGameLeaders is ERC721 {
       [color2, color3]
     ];
 
+    uint256 tokenIx = tokenId % 12;
+
 
     return string.concat(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 487 487">'
-        '<style>*{stroke:', colorPairs[tokenId][0],';fill:', colorPairs[tokenId][1],'}</style>'
+        '<style>*{stroke:', colorPairs[tokenIx][0],';fill:', colorPairs[tokenIx][1],'}</style>'
         '<rect width="100%" height="100%" x="0" y="0" stroke-width="0"></rect>'
         '<path d="M465.001 435.5H244.995H20.5L242.75 50L465.001 435.5Z"  stroke-width="14"/>'
         '<path d="M205.5 348C216 357 227.513 359.224 243.001 359.999C293 362.5 301.001 294.999 243.001 293.499C185.001 291.999 196.5 224.5 243.001 229.998C243.001 229.998 259.5 229.998 276.5 244"  stroke-width="14" stroke-linecap="square"/>'
@@ -522,14 +551,4 @@ contract PyramidGameLeaders is ERC721 {
     );
 
   }
-
-
-  event MetadataUpdate(uint256 _tokenId);
-  event BatchMetadataUpdate(uint256 _fromTokenId, uint256 _toTokenId);
-
-  function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721) returns (bool) {
-    // ERC2981 & ERC4906
-    return interfaceId == bytes4(0x2a55205a) || interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
-  }
-
 }
