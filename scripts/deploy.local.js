@@ -6,7 +6,7 @@ async function main() {
   const signers = await ethers.getSigners()
 
   const PyramidGameFactory = await ethers.getContractFactory('PyramidGame', signers[0])
-  const PyramidGame = await PyramidGameFactory.deploy()
+  const PyramidGame = await PyramidGameFactory.deploy(txValue(0.01))
   await PyramidGame.deployed()
 
   const PG = (s) => PyramidGame.connect(signers[s])

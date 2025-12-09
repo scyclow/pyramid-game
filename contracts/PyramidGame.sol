@@ -48,10 +48,19 @@ contract PyramidGame is ERC20 {
 
   uint256 constant public TOKENS_PER_ETH = 100_000;
 
+  /// @notice The Leaders contract managing the leader NFTs and contribution balances
   PyramidGameLeaders public leaders;
+
+  /// @notice The Wallet contract controlled by majority of leaders for governance actions
   PyramidGameWallet public wallet;
+
+  /// @notice Array of child pyramid game addresses deployed from this pyramid
   address[] public children;
+
+  /// @notice The parent pyramid or deployer address (EOA for root pyramids, contract address for child pyramids)
   address public parent;
+
+  /// @dev Flag to ensure initialize() can only be called once
   bool private initialized;
 
   event Contribution(address indexed sender, uint256 amount);
@@ -63,8 +72,10 @@ contract PyramidGame is ERC20 {
   }
 
   /// @notice Initialize the Pyramid Game instance
-  /// @dev Can only be called once. Called by constructor for normal deployments, or manually for proxy clones
-  /// @param deployer The address that will receive the first leader NFT
+  /// @dev Can only be called once. Called by constructor for normal deployments, or manually for proxy clones.
+  ///      Creates the Leaders NFT contract and Wallet governance contract.
+  ///      The wallet receives msg.value and transfers it to the parent (deployer for root, parent pyramid for children).
+  /// @param deployer The address that will receive the first leader NFT (token ID 0)
   function initialize(address deployer) public payable {
     require(msg.value > 0, 'Must include a starting bid');
     require(!initialized, "Already initialized");
@@ -107,13 +118,15 @@ contract PyramidGame is ERC20 {
   }
 
 
-  /// @dev Force a distribution if the contract accrues a balance. This may occur if
-  /// distributions are directly or indirectly forwarded back to the contract.
+  /// @notice Force a distribution if the contract accrues a balance
+  /// @dev This may occur if distributions are directly or indirectly forwarded back to the contract.
+  ///      Distributes the entire contract balance to leaders proportionally.
   function forceDistribution() external ignoreReentry {
     _distribute(address(this).balance);
   }
 
-  /// @notice Distribute ETH to leaders proportionally without updating contribution balances.
+  /// @notice Distribute ETH to leaders proportionally without updating contribution balances
+  /// @dev Does not trigger a reorg or mint/burn tokens. Useful for distributing revenue or donations to leaders.
   function distribute() external payable ignoreReentry {
     _distribute(msg.value);
   }
@@ -270,6 +283,9 @@ contract PyramidGame is ERC20 {
     }
   }
 
+  /// @notice Update the wallet contract to a new address
+  /// @dev Can only be called by the current wallet (via multisig governance). Allows upgrading wallet logic.
+  /// @param newWallet The address of the new wallet contract
   function updateWallet(PyramidGameWallet newWallet) external {
     require(msg.sender == address(wallet), 'Only the wallet can perform this action');
     wallet = newWallet;
@@ -281,13 +297,27 @@ contract PyramidGame is ERC20 {
 /// @title Pyramid Game Wallet
 /// @author steviep.eth
 /// @notice Wallet contract that executes transactions approved by majority of leaders
+/// @dev Uses a multisig pattern where leader NFT owners sign off-chain messages to authorize transactions.
+///      Requires majority (>50%) of leaders to sign for execution.
 contract PyramidGameWallet {
+  /// @notice Reference to the PyramidGame contract
   PyramidGame public pyramidGame;
+
+  /// @notice Reference to the PyramidGameLeaders contract for verifying leader ownership
   PyramidGameLeaders public leaders;
+
+  /// @notice Number of leader slots (immutable, set at deployment)
   uint8 public immutable SLOTS;
 
+  /// @notice Mapping to prevent replay attacks - tracks which nonces have been used
   mapping(uint256 => bool) public nonceUsed;
 
+  /// @notice Initialize the wallet contract
+  /// @dev Transfers any received ETH to the parent address (deployer for root, parent pyramid for children)
+  /// @param _slots Number of leader slots
+  /// @param pgAddr Address of the PyramidGame contract
+  /// @param leaderAddr Address of the PyramidGameLeaders contract
+  /// @param parentAddr Address to send initialization ETH to (parent pyramid or deployer)
   constructor(uint8 _slots, address pgAddr, address leaderAddr, address payable parentAddr) payable {
     pyramidGame = PyramidGame(payable(pgAddr));
     leaders = PyramidGameLeaders(payable(leaderAddr));
