@@ -64,12 +64,15 @@ contract PyramidGame is ERC20 {
   bool private initialized;
 
   event Contribution(address indexed sender, uint256 amount);
-  event Distribution(address indexed recipient, uint256 amount);
   event ChildPyramidDeployed(address indexed childAddress, address indexed deployer, uint256 initialAmount);
 
   constructor() payable ERC20("Pyramid Game", "PYRAMID") {
     initialize(msg.sender);
   }
+
+
+
+  //// TODO initialize with different tickers/names, slot numbers
 
   /// @notice Initialize the Pyramid Game instance
   /// @dev Can only be called once. Called by constructor for normal deployments, or manually for proxy clones.
@@ -82,7 +85,7 @@ contract PyramidGame is ERC20 {
     initialized = true;
     parent = msg.sender;
     leaders = new PyramidGameLeaders(deployer, SLOTS, msg.value);
-    wallet = new PyramidGameWallet{value: msg.value}(SLOTS, address(this), address(leaders), payable(msg.sender));
+    wallet = new PyramidGameWallet{value: msg.value}(address(this), address(leaders), payable(msg.sender));
   }
 
 
@@ -158,21 +161,25 @@ contract PyramidGame is ERC20 {
   /// Leader's percentage of the sum, and distribute the original contribution proportionally.
   function _distribute(uint256 amount) internal returns (uint8) {
     uint8 senderIsLeaderTokenId = INVALID_SLOT;
-    uint256 contributionTotal = leaders.contributionTotal();
 
-    for (uint8 ix; ix < SLOTS; ix++) {
-      if (!leaders.exists(ix)) return senderIsLeaderTokenId;
-      if (leaders.ownerOf(ix) == msg.sender) {
-        senderIsLeaderTokenId = ix;
-      }
+    // Single batch read of all leader data and contribution total
+    (PyramidGameLeaders.LeaderData[] memory leaderCache, uint256 contributionTotal) = leaders.getAllLeaderData();
 
-      uint256 amountToTransfer = (amount * leaders.contributions(ix)) / contributionTotal;
-      address recipient = leaders.recipientOf(ix);
+    // Distribute using cached data (no external calls in loop)
+    uint256 leaderCount = leaderCache.length;
+    unchecked {
+      for (uint8 ix; ix < leaderCount; ++ix) {
+        if (leaderCache[ix].owner == msg.sender) {
+          senderIsLeaderTokenId = ix;
+        }
 
-      bool distributionSuccessful =  _safeTransferETH(recipient, amountToTransfer);
+        uint256 amountToTransfer = (amount * uint256(leaderCache[ix].contribution)) / contributionTotal;
 
-      if (distributionSuccessful) {
-        emit Distribution(recipient, amountToTransfer);
+        address recipient = leaderCache[ix].recipient != address(0)
+          ? leaderCache[ix].recipient
+          : leaderCache[ix].owner;
+
+        _safeTransferETH(recipient, amountToTransfer);
       }
     }
 
@@ -205,10 +212,10 @@ contract PyramidGame is ERC20 {
 
   /**
    * @notice Transfer ETH and return the success status.
-   * @dev This function only forwards 30,000 gas to the callee.
+   * @dev This function only forwards 60,000 gas to the callee.
    */
   function _safeTransferETH(address to, uint256 value) internal returns (bool) {
-    (bool success, ) = to.call{ value: value, gas: 60_000 }(new bytes(0));
+    (bool success, ) = to.call{ value: value, gas: 60_000 }("");
     return success;
   }
 
@@ -306,22 +313,17 @@ contract PyramidGameWallet {
   /// @notice Reference to the PyramidGameLeaders contract for verifying leader ownership
   PyramidGameLeaders public leaders;
 
-  /// @notice Number of leader slots (immutable, set at deployment)
-  uint8 public immutable SLOTS;
-
   /// @notice Mapping to prevent replay attacks - tracks which nonces have been used
   mapping(uint256 => bool) public nonceUsed;
 
   /// @notice Initialize the wallet contract
   /// @dev Transfers any received ETH to the parent address (deployer for root, parent pyramid for children)
-  /// @param _slots Number of leader slots
   /// @param pgAddr Address of the PyramidGame contract
   /// @param leaderAddr Address of the PyramidGameLeaders contract
   /// @param parentAddr Address to send initialization ETH to (parent pyramid or deployer)
-  constructor(uint8 _slots, address pgAddr, address leaderAddr, address payable parentAddr) payable {
+  constructor(address pgAddr, address leaderAddr, address payable parentAddr) payable {
     pyramidGame = PyramidGame(payable(pgAddr));
     leaders = PyramidGameLeaders(payable(leaderAddr));
-    SLOTS = _slots;
 
     // Transfer ETH to parent
     if (msg.value > 0) {
@@ -329,7 +331,6 @@ contract PyramidGameWallet {
       require(success, 'Transfer to parent failed');
     }
   }
-
 
 
   /// @notice Execute a transaction if signed by majority of leaders
@@ -349,7 +350,7 @@ contract PyramidGameWallet {
   ) external {
     require(!nonceUsed[txNonce], 'Nonce already used');
     require(leaderTokenIds.length == signatures.length, 'Array length mismatch');
-    require(leaderTokenIds.length > SLOTS / 2, 'Insufficient votes');
+    require(leaderTokenIds.length > leaders.totalSupply() / 2, 'Insufficient votes');
 
     bytes32 messageHash = keccak256(abi.encode(target, value, data, txNonce));
     bytes32 ethSignedMessageHash = keccak256(abi.encodePacked('\x19Ethereum Signed Message:\n32', messageHash));
@@ -357,7 +358,10 @@ contract PyramidGameWallet {
     // Verify each signature corresponds to the owner of the leader token
     for (uint256 i = 0; i < leaderTokenIds.length; i++) {
       address signer = recoverSigner(ethSignedMessageHash, signatures[i]);
-      require(leaders.ownerOf(leaderTokenIds[i]) == signer, 'Invalid signature');
+      require(
+        leaders.isApprovedOrOwner(signer, leaderTokenIds[i]),
+        'Invalid signature'
+      );
     }
 
     nonceUsed[txNonce] = true;
@@ -409,14 +413,19 @@ contract PyramidGameWallet {
 /// @author steviep.eth
 /// @notice NFT contract that manages the Leader Board for Pyramid Game.
 contract PyramidGameLeaders is ERC721 {
+  struct LeaderData {
+    address owner;
+    uint96 contribution;
+    address recipient;
+  }
+
   address public root;
   uint256 public contributionTotal;
   uint256 public totalSupply = 1;
   uint256 public immutable SLOTS;
   TokenURI public uri;
 
-  mapping(uint256 => address) public recipientOf;
-  mapping(uint256 => uint256) public contributions;
+  mapping(uint256 => LeaderData) private leaderData;
 
   constructor(address deployer, uint256 slots, uint256 initialAmount) ERC721("Pyramid Game Leader", "LEADER") {
     root = msg.sender;
@@ -424,12 +433,13 @@ contract PyramidGameLeaders is ERC721 {
     uri = new TokenURI();
 
     _mint(deployer, 0);
+    leaderData[0].owner = deployer;
     incrementContributionBalance(0, initialAmount);
   }
 
 
   receive () external payable {
-    (bool success, ) = payable(root).call{ value: msg.value }(new bytes(0));
+    (bool success, ) = payable(root).call{ value: msg.value }("");
     success;
   }
 
@@ -437,19 +447,52 @@ contract PyramidGameLeaders is ERC721 {
     return _exists(tokenId);
   }
 
+  function isApprovedOrOwner(address spender, uint256 tokenId) external view returns (bool) {
+    return _isApprovedOrOwner(spender, tokenId);
+  }
+
+  /// @notice Batch read all leader data and contribution total in a single call for gas efficiency
+  function getAllLeaderData() external view returns (LeaderData[] memory result, uint256 total) {
+    total = contributionTotal;
+    uint256 supply = totalSupply;
+    result = new LeaderData[](supply);
+    unchecked {
+      for (uint8 i; i < supply; ++i) {
+        result[i] = leaderData[i];
+      }
+    }
+  }
+
+  /// @notice Get contribution amount for a leader token
+  function contributions(uint256 tokenId) external view returns (uint256) {
+    return leaderData[tokenId].contribution;
+  }
+
+  /// @notice Get the recipient address for a leader token's distributions
+  function recipientOf(uint256 tokenId) external view returns (address) {
+    address r = leaderData[tokenId].recipient;
+    return r != address(0) ? r : leaderData[tokenId].owner;
+  }
+
   function lowestLeader() external view returns (uint256, uint256) {
     uint256 lowestLeaderIx = 0;
-    uint256 lowestLeaderAmount = contributions[0];
+    uint256 lowestLeaderAmount = leaderData[0].contribution;
 
-
-    for (uint256 ix = 1; ix < SLOTS; ix++) {
-      if (contributions[ix] < lowestLeaderAmount) {
-        lowestLeaderIx = ix;
-        lowestLeaderAmount = contributions[lowestLeaderIx];
+    unchecked {
+      for (uint256 ix = 1; ix < totalSupply; ++ix) {
+        if (leaderData[ix].contribution < lowestLeaderAmount) {
+          lowestLeaderIx = ix;
+          lowestLeaderAmount = leaderData[ix].contribution;
+        }
       }
     }
 
     return (lowestLeaderIx, lowestLeaderAmount);
+  }
+
+  /// @notice Check if an address is currently a leader
+  function isLeader(address addr) external view returns (bool) {
+    return balanceOf(addr) > 0;
   }
 
 
@@ -459,12 +502,13 @@ contract PyramidGameLeaders is ERC721 {
   /// @notice Allows the owner of a LEADER token to forward all Pyramid Game ETH to another address.
   function setRecipient(uint256 tokenId, address recipient) external {
     require(ownerOf(tokenId) == msg.sender, 'Only token owner can perform this action');
-    recipientOf[tokenId] = recipient;
+    leaderData[tokenId].recipient = recipient;
   }
 
-  /// @dev Clear the recipient address on token transfer.
+  /// @dev Sync recipient and owner on token transfer.
   function _beforeTokenTransfer(address, address to, uint256 tokenId) internal virtual override {
-    recipientOf[tokenId] = to;
+    leaderData[tokenId].recipient = to;
+    leaderData[tokenId].owner = to;
   }
 
 
@@ -476,7 +520,10 @@ contract PyramidGameLeaders is ERC721 {
   }
 
   function incrementContributionBalance(uint256 tokenId, uint256 incrementAmount) public onlyRoot {
-    contributions[tokenId] += incrementAmount;
+    uint256 newContribution = leaderData[tokenId].contribution + incrementAmount;
+    require(newContribution <= type(uint96).max, 'Contribution exceeds uint96 limit');
+
+    leaderData[tokenId].contribution = uint96(newContribution);
     contributionTotal += incrementAmount;
 
     emit MetadataUpdate(tokenId);
@@ -485,8 +532,11 @@ contract PyramidGameLeaders is ERC721 {
   function mint(address recipient, uint256 incrementAmount) external onlyRoot {
     require(totalSupply < SLOTS);
     _mint(recipient, totalSupply);
+    leaderData[totalSupply].owner = recipient;
     incrementContributionBalance(totalSupply, incrementAmount);
-    totalSupply += 1;
+    unchecked {
+      totalSupply += 1;
+    }
   }
 
   function reorg(uint256 tokenId, address recipient, uint256 incrementAmount) external onlyRoot {
@@ -543,7 +593,7 @@ contract TokenURI {
     ));
   }
 
-  function rawSVG(uint256 tokenId) public view returns (string memory) {
+  function rawSVG(uint256 tokenId) public pure returns (string memory) {
     string memory color0 = '#000';
     string memory color1 = '#46ff5a';
     string memory color2 = '#001cff';
@@ -568,7 +618,6 @@ contract TokenURI {
     ];
 
     uint256 tokenIx = tokenId % 12;
-
 
     return string.concat(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576">'

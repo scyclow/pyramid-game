@@ -4,7 +4,7 @@
 export const CONTRACTS = {
   PyramidGame: {
     addr: {
-      local: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+      local: '0x8464135c8F25Da09e49BC8782676a84730C318bC',
       sepolia: '0x3b0E151c9be53B6316Ef7E7B7A18FF2713C6D609',
       base: ''
     },
@@ -27,7 +27,7 @@ export const CONTRACTS = {
   },
   PyramidGameLeaders: {
     addr: {
-      local: '0xa16E02E87b7454126E5E10d957A927A7F5B5d2be',
+      local: '0x8398bCD4f633C72939F9043dB78c574A91C99c0A',
       sepolia: '',
       base: ''
     },
@@ -42,6 +42,14 @@ export const CONTRACTS = {
       'function setRecipient(uint256 tokenId, address recipient) external',
       'function balanceOf(address owner) external view returns (uint256)'
     ]
+  },
+  PyramidGameWallet: {
+    addr: {
+      local: '0x02299a3DcaB0938d0544130D054Bcbfb32B588C3',
+      sepolia: '',
+      base: ''
+    },
+    abi: []
   }
 }
 

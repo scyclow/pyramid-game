@@ -44,6 +44,10 @@
       animation: Blink 3s steps(2, start) infinite;
     }
 
+    .mediumBlink {
+      animation: Blink 1.5s steps(2, start) infinite;
+    }
+
     #logo {
       width: 500px;
       max-width: 81vw;
@@ -221,11 +225,46 @@
       font-weight: 600;
     }
 
+    /* Small Leaders Grid */
+    .small-leaders-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5em;
+      max-width: 500px;
+      width: 90vw;
+      margin: 1em auto;
+    }
+
+    .small-leaders-grid leader-svg {
+      width: 100%;
+      max-width: 150px;
+      margin: 0 auto;
+      display: block;
+    }
+
+    .small-leaders-grid .bordered {
+      border: 1px solid var(--font-color);
+    }
+
+    @media (max-width: 580px) {
+      .small-leaders-grid {
+        grid-template-columns: repeat(3, 1fr);
+        max-width: 400px;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .small-leaders-grid {
+        gap: 0.3em;
+        max-width: 95vw;
+      }
+    }
+
     /* Grid Leaderboard Styles */
     .leaderboard-grid {
-      display: grid;
+/*      display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 0em;
+      gap: 0em;*/
       max-width: 1200px;
       margin: 2em auto;
       padding: 0 1em;
@@ -243,6 +282,23 @@
       }
     }
 
+    /* Address display toggle */
+    .addr-short {
+      display: inline;
+    }
+    .addr-full {
+      display: none;
+    }
+
+    @media (min-width: 701px) {
+      .addr-short {
+        display: none;
+      }
+      .addr-full {
+        display: inline;
+      }
+    }
+
     @media (max-width: 580px) {
       .leaderboard-grid {
         grid-template-columns: 1fr;
@@ -250,95 +306,93 @@
     }
 
     .leader-card {
-      border: 0 solid var(--font-color);
-      border-left-width: 6px;
-      border-bottom-width: 6px;
+      border: 6px solid var(--font-color);
+      border-top-width: 0;
       padding: 1em;
       display: flex;
-      flex-direction: column;
+      /*flex-direction: column;*/
       align-items: center;
       gap: 0.75em;
       /*background: var(--font-color);*/
       /*color: var(--bg-color);*/
     }
+    .leader-card:first-child {
+      border-top-width: 6px;
+
+    }
+
     .leader-card .address {
       /*color: var(--bg-color);*/
-    }
-
-    /* 4 columns - rightmost column (every 4th) gets right border */
-    .leader-card:nth-child(4n) {
-      border-right-width: 6px;
-    }
-    /* 4 columns - top row (first 4) gets top border */
-    .leader-card:nth-child(-n+4) {
-      border-top-width: 6px;
-    }
-
-    @media (max-width: 1110px) {
-      /* 3 columns - reset 4-column rules */
-      .leader-card:nth-child(4n) {
-        border-right-width: 0;
-      }
-      .leader-card:nth-child(-n+4) {
-        border-top-width: 0;
-      }
-      /* 3 columns - rightmost column (every 3rd) gets right border */
-      .leader-card:nth-child(3n) {
-        border-right-width: 6px;
-      }
-      /* 3 columns - top row (first 3) gets top border */
-      .leader-card:nth-child(-n+3) {
-        border-top-width: 6px;
-      }
-    }
-
-    @media (max-width: 740px) {
-      /* 2 columns - reset 3-column rules */
-      .leader-card:nth-child(3n) {
-        border-right-width: 0;
-      }
-      .leader-card:nth-child(-n+3) {
-        border-top-width: 0;
-      }
-      /* 2 columns - rightmost column (every 2nd) gets right border */
-      .leader-card:nth-child(2n) {
-        border-right-width: 6px;
-      }
-      /* 2 columns - top row (first 2) gets top border */
-      .leader-card:nth-child(-n+2) {
-        border-top-width: 6px;
-      }
-    }
-
-    @media (max-width: 580px) {
-      /* 1 column - reset 2-column rules and set all items to get right border */
-      .leader-card:nth-child(n) {
-        border-right-width: 6px;
-        border-top-width: 0;
-      }
-      /* 1 column - only first item gets top border */
-      .leader-card:nth-child(1) {
-        border-top-width: 6px;
-      }
     }
 
     .leader-card img,
     .leader-card leader-svg {
       width: 100%;
-      max-width: 200px;
+      max-width: 9em;
       height: auto;
       display: block;
     }
 
+    @media (max-width: 480px) {
+      .leader-card {
+        flex-direction: column;
+        align-items: center;
+        font-size: 0.9em;
+      }
+
+
+      .leader-info h3 {
+        font-size: 1.1em;
+      }
+
+      .leader-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+
+
+
+
+
     .leader-info {
       width: 100%;
-      text-align: center;
-      font-size: 0.9em;
+    }
+    .leader-info h3 {
+      text-align: left;
     }
 
     .leader-info > div {
       margin: 0.25em 0;
     }
+
+
+    .leader-info dl {
+      display: inline-flex;
+      flex-direction: column;
+      margin: 0.25em 0.5em;
+      margin-left: 0;
+    }
+
+    .leader-info dt {
+      font-size: 0.75em;
+      background: var(--font-color);
+      color: var(--bg-color);
+      /*border:  1px solid;*/
+      /*display: block;*/
+      padding: 0.25em 0.5em;
+      /*width: 100%;*/
+    }
+
+    .leader-info dd {
+      /*width: 100%;*/
+      border: 1px solid;
+      padding: 0.25em 0.5em;
+      /*display: block;*/
+    }
+
+
 
     .section-box {
       border: 3px solid var(--font-color);
@@ -405,6 +459,7 @@
 
 </head>
 <body>
+  <nav style="height: 1em; padding:  0.25em; background: var(--font-color); color: var(--bg-color);">$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$</nav>
   <div class="center-v" style="height: 80vh;">
 
     <svg id="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 487 487" fill="none">
@@ -468,24 +523,73 @@
     </h2>
 
 
-    <svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 1168 702" fill="none">
-      <path d="M284 627L327.301 552L240.699 552L284 627ZM276.5 179L276.5 559.5L291.5 559.5L291.5 179L276.5 179Z" fill="var(--font-color)"/>
-      <path d="M404 590L447.301 515L360.699 515L404 590ZM396.5 179L396.5 522.5L411.5 522.5L411.5 179L396.5 179Z" fill="var(--font-color)"/>
-      <path d="M525 553L568.301 478L481.699 478L525 553ZM517.5 179L517.5 485.5L532.5 485.5L532.5 179L517.5 179Z" fill="var(--font-color)"/>
-      <path d="M164 665L207.301 590L120.699 590L164 665ZM156.5 179L156.5 597.5L171.5 597.5L171.5 179L156.5 179Z" fill="var(--font-color)"/>
-      <path d="M44 702L87.3013 627H0.69873L44 702ZM36.5 179L36.5 634.5H51.5L51.5 179H36.5Z" fill="var(--font-color)"/>
-      <path d="M885 441L928.301 366L841.699 366L885 441ZM877.5 179L877.5 373.5L892.5 373.5L892.5 179L877.5 179Z" fill="var(--font-color)"/>
-      <path d="M1004 403L1047.3 328L960.699 328L1004 403ZM996.5 179L996.5 335.5L1011.5 335.5L1011.5 179L996.5 179Z" fill="var(--font-color)"/>
-      <path d="M1124 366L1167.3 291L1080.7 291L1124 366ZM1116.5 179L1116.5 298.5L1131.5 298.5L1131.5 179L1116.5 179Z" fill="var(--font-color)"/>
-      <path d="M764 478L807.301 403L720.699 403L764 478ZM756.5 179L756.5 410.5L771.5 410.5L771.5 179L756.5 179Z" fill="var(--font-color)"/>
-      <path d="M645 515L688.301 440L601.699 440L645 515ZM637.5 179L637.5 447.5L652.5 447.5L652.5 179L637.5 179Z" fill="var(--font-color)"/>
-      <line x1="36.5" y1="181.5" x2="1131.5" y2="181.5"  stroke-width="15"/>
-      <line x1="583.5" y1="-3.27835e-07" x2="583.5" y2="189"  stroke-width="15"/>
+    <svg id="distribution-svg" xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 1168 702" fill="none">
+      <path d="M44 702L87.301 627H0.699L44 702ZM36.5 179L36.5 634.5H51.5L51.5 179H36.5Z" fill="var(--font-color)"/>
+      <path d="M142 672L185.301 597H98.699L142 672ZM134.5 179L134.5 604.5H149.5L149.5 179H134.5Z" fill="var(--font-color)"/>
+      <path d="M240 641L283.301 566H196.699L240 641ZM232.5 179L232.5 573.5H247.5L247.5 179H232.5Z" fill="var(--font-color)"/>
+      <path d="M338 611L381.301 536H294.699L338 611ZM330.5 179L330.5 543.5H345.5L345.5 179H330.5Z" fill="var(--font-color)"/>
+      <path d="M436 580L479.301 505H392.699L436 580ZM428.5 179L428.5 512.5H443.5L443.5 179H428.5Z" fill="var(--font-color)"/>
+      <path d="M534 550L577.301 475H490.699L534 550ZM526.5 179L526.5 482.5H541.5L541.5 179H526.5Z" fill="var(--font-color)"/>
+      <path d="M632 519L675.301 444H588.699L632 519ZM624.5 179L624.5 451.5H639.5L639.5 179H624.5Z" fill="var(--font-color)"/>
+      <path d="M730 489L773.301 414H686.699L730 489ZM722.5 179L722.5 421.5H737.5L737.5 179H722.5Z" fill="var(--font-color)"/>
+      <path d="M828 458L871.301 383H784.699L828 458ZM820.5 179L820.5 390.5H835.5L835.5 179H820.5Z" fill="var(--font-color)"/>
+      <path d="M926 428L969.301 353H882.699L926 428ZM918.5 179L918.5 360.5H933.5L933.5 179H918.5Z" fill="var(--font-color)"/>
+      <path d="M1024 397L1067.3 322H980.699L1024 397ZM1016.5 179L1016.5 329.5H1031.5L1031.5 179H1016.5Z" fill="var(--font-color)"/>
+      <path d="M1122 367L1165.3 292H1078.7L1122 367ZM1114.5 179L1114.5 299.5H1129.5L1129.5 179H1114.5Z" fill="var(--font-color)"/>
+      <line x1="36.5" y1="181.5" x2="1129.5" y2="181.5" stroke-width="15"/>
+      <line x1="583" y1="-3.27835e-07" x2="583" y2="189" stroke-width="15"/>
     </svg>
 
     <div class="center-v">
+      <!--
       <h2 style="font-size: 2.675em; margin-bottom: 0.25em;">Leaders <sup style="margin-left: -1em; font-size: 0.5em;"><a href="#faq">?</a></sup></h2>
+      -->
 
+      <div class="small-leaders-grid">
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#000;fill:#46ff5a}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#001cff;fill:#46ff5a}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#ff1b1b;fill:#46ff5a}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#001cff;fill:#000}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#ff1b1b;fill:#000}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#46ff5a;fill:#000}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>' class="bordered"></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#ff1b1b;fill:#001cff}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#46ff5a;fill:#001cff}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>' class="bordered"></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#000;fill:#001cff}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#46ff5a;fill:#ff1b1b}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>' class="bordered"></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#000;fill:#ff1b1b}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#001cff;fill:#ff1b1b}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
+      </div>
+    </div>
+
+    <div style="margin: 1em">
+      <svg xmlns="http://www.w3.org/2000/svg" width="100%"  viewBox="0 0 1095 225" fill="none">
+        <path d="M547 225L590.301 150L503.699 150L547 225ZM539.5 3.27835e-07L539.5 157.5L554.5 157.5L554.5 -3.27835e-07L539.5 3.27835e-07Z" fill="var(--font-color)"/>
+      </svg>
+    </div>
+
+    <div style="margin: 3em; display: flex; justify-content: center;">
+      <svg style="height: 100%; width: 220px; max-width: 27.5vw;" xmlns="http://www.w3.org/2000/svg" width="318" height="318" viewBox="0 0 318 318" fill="none">
+        <path class="mediumBlink" style="animation-delay: 0s;" d="M317.241 228.479L317.241 141.876L242.242 185.178L317.241 228.479ZM187.494 3.75L180.999 7.5L276.996 173.772L283.491 170.022L289.987 166.272L193.989 6.70552e-07L187.494 3.75Z" fill="black"/>
+        <path class="mediumBlink" style="animation-delay: -0.5s;" d="M136.243 3.75623L61.243 47.0575L136.243 90.3588L136.243 3.75623ZM6.49609 228.484L12.9913 232.234L108.988 65.9629L102.493 62.2129L95.9978 58.4629L0.000903785 224.734L6.49609 228.484Z" fill="black"/>
+        <path class="mediumBlink" style="animation-delay: -1s;" d="M28.8927 274.615L103.893 317.916L103.893 231.314L28.8927 274.615ZM293.893 274.615V267.115L96.3927 267.115V274.615V282.115L293.893 282.115V274.615Z" fill="black"/>
+      </svg>
+    </div>
+
+    <div style="margin: 1em">
+      <svg xmlns="http://www.w3.org/2000/svg" width="100%"  viewBox="0 0 1095 225" fill="none">
+        <path d="M547 225L590.301 150L503.699 150L547 225ZM539.5 3.27835e-07L539.5 157.5L554.5 157.5L554.5 -3.27835e-07L539.5 3.27835e-07Z" fill="var(--font-color)"/>
+      </svg>
+    </div>
+
+    <h1 class="slowBlink">$</h1>
+  </section>
+
+  <section>
+    <p>All ETH sent to the Pyramid Game is split proportionally among the Leaders</p>
+  </section>
+
+  <section>
+    <div class="center-v">
       <connect-wallet>
         <div slot="connected">
           <div id="leaderboardStats" style="text-align: center; margin: 1.5em auto; font-size: 1.2em;"></div>
@@ -520,15 +624,7 @@
     </connect-wallet>
   </section>
 
-  <section>
-    <div style="margin: 1em">
-      <svg xmlns="http://www.w3.org/2000/svg" width="100%"  viewBox="0 0 1095 225" fill="none">
-        <path d="M547 225L590.301 150L503.699 150L547 225ZM539.5 3.27835e-07L539.5 157.5L554.5 157.5L554.5 -3.27835e-07L539.5 3.27835e-07Z" fill="var(--font-color)"/>
-      </svg>
-    </div>
 
-    <h1 class="slowBlink">$</h1>
-  </section>
 
   <section>
     <div class="center-v">
@@ -671,7 +767,8 @@
     // Fetch all leader data
     const leaders = await Promise.all(times(totalSupply, async i => {
       const owner = await PyramidGameLeaders.ownerOf(i)
-      const prettyAddr = await provider.formatAddr(owner)
+      const prettyAddrShort = await provider.formatAddr(owner)
+      const prettyAddr = await provider.formatAddr(owner, false)
       const contribution = ethVal(await PyramidGameLeaders.contributions(i))
       const tokenURI = await PyramidGameLeaders.tokenURI(i)
       const svg = extractSVG(tokenURI)
@@ -681,6 +778,7 @@
         tokenId: i,
         owner,
         prettyAddr,
+        prettyAddrShort,
         contribution,
         svg,
         percentage
@@ -700,9 +798,8 @@
     // Render stats
     $.id('leaderboardStats').innerHTML = `
       <div style="display: flex; justify-content: center; gap: 2em; flex-wrap: wrap;">
-        <div><strong>Leaders:</strong> ${totalSupply}</div>
-        <div><strong>Leader Contributions:</strong> <span style="margin-right: 0.25em">Ξ</span>${contributionTotal.toFixed(4)}</div>
-        <div><strong>Total Contributed:</strong> <span style="margin-right: 0.25em">Ξ</span>${totalContributed.toFixed(4)}</div>
+        <div><strong>Sent by Leaders:</strong> <span style="margin-right: 0.25em">Ξ</span>${contributionTotal.toFixed(4)}</div>
+        <div><strong>Total Sent:</strong> <span style="margin-right: 0.25em">Ξ</span>${totalContributed.toFixed(4)}</div>
       </div>
     `
 
@@ -711,12 +808,30 @@
       const escapedSVG = l.svg.replace(/"/g, '&quot;')
       return `
         <div class="leader-card">
-          <leader-svg svg="${escapedSVG}"></leader-svg>
+          <leader-svg svg="${escapedSVG}" style="${[5,7,9].includes(l.tokenId) ? 'border: 1px solid' : ''}"></leader-svg>
           <div class="leader-info">
-            <div><strong>#${l.tokenId}</strong></div>
-            <div>${etherscanAddr(etherscanLink, l.owner, l.prettyAddr)}</div>
-            <div><span style="margin-right: 0.25em">Ξ</span>${l.contribution.toFixed(4)}</div>
-            <div><strong>${l.percentage.toFixed(2)}%</strong></div>
+            <div><h3>Pyramid Game Leader #${l.tokenId}</h3></div>
+            <dl>
+              <dt>OWNER</dt>
+              <dd>
+                <span class="addr-short">${etherscanAddr(etherscanLink, l.owner, l.prettyAddrShort)}</span>
+                <span class="addr-full">${etherscanAddr(etherscanLink, l.owner, l.prettyAddr)}</span>
+              </dd>
+            </dl>
+            <div>
+              <dl>
+                <dt>PAID IN</dt>
+                <dd>
+                  <span style="margin-right: 0.25em">Ξ</span><strong>${l.contribution.toFixed(4)}</strong>
+                </dd>
+              </dl>
+              <dl>
+                <dt>% OF NEXT PAYOUT</dt>
+                <dd>
+                  <strong>${l.percentage.toFixed(2)}%</strong>
+                </dd>
+              </dl>
+            </div>
           </div>
         </div>
       `
@@ -731,6 +846,7 @@
 
     // Render user leader section
     if (userTokens.length > 0) {
+
       $.id('userLeaderSection').innerHTML = `
         <div class="section-box">
           <h2>Your Leader Tokens</h2>
