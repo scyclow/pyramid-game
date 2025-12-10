@@ -6,10 +6,43 @@ when you put a number into the contribution input it displays a projection of wh
 
 
 
-Leaderboard
+LEADERBOARD
+...
 
 
-  - under leaderboard: table that shows how 1 eth would be split. simulate with different amounts. if amount is higher than current leader, explain that if user sends that much then they would become a leader and get x leader token (show that token)
+(if not connected)
+  GET STARTED
+    (connect wallet button)
+
+(if connected)
+  Connected as: [formatted address]
+  $PYRAMID Balance: ...
+  Leader tokens: [csv list of leader tokens]
+
+
+  - send input + button
+  - display a message under the input when the user inputs a number. then the input is empty, display nothing
+  - when user inputs a number:
+    - if they are already a leader:
+      - say what their new % will be
+    - else:
+      - if greater than lowestLeader:
+        - display message saying that it would get them on the leaderboar + say what their % of payouts
+      - else:
+        - display what their ERC20 balance would be after the transaction. if that's enough to get them on the leaderboard, tell them that they'd also need to call "CLAIM LEADERSHIP"
+
+    - also, display a table that simulates how their contribution will be split among the current leaders
+
+  - if their ERC20 balance is enough to get them on the leaderboard, display a CLAIM LEADERSHIP button, which calls claimLeadership
+
+(if no web3 wallet, don't show anything)
+
+
+
+
+
+
+
 
 
 if displaying child game, link to parent game
@@ -17,9 +50,6 @@ if displaying child game, link to parent game
 
 USER SECTION
 
-Connected as: [formatted address]
-$PYRAMID Balance: ...
-Leader tokens:
 
 
 if user is not leader

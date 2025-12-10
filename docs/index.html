@@ -112,6 +112,51 @@
       padding: 0 0.75em;
     }
 
+    nav {
+      background: var(--font-color);
+      color: var(--bg-color);
+      padding: 0.5em;
+      display: flex;
+      justify-content: space-evenly;
+    }
+
+    nav a {
+      color: var(--bg-color);
+    }
+
+    ul {
+      font-weight: bolder;
+      font-size: 2em;
+      list-style: none;
+      padding: 0;
+
+    }
+
+    ul li {
+      padding: 0.5em 0;
+    }
+
+    ul li::before {
+      content: "▲";
+      color: var(--font-color);
+      display: inline-block;
+      width: 1em;
+      margin-left: -1em;
+    }
+
+    @media (max-width: 750px) {
+      ul {
+        font-size: 1.5em;
+      }
+    }
+
+
+    @media (max-width: 580px) {
+      ul {
+        font-size: 1.25em;
+        margin-left: 1.5em;
+      }
+    }
     input {
       border: 3px solid var(--font-color);
       text-align: center;
@@ -242,6 +287,10 @@
       max-width: 150px;
       margin: 0 auto;
       display: block;
+    }
+
+    leader-svg {
+      border: 1px solid;
     }
 
     .small-leaders-grid .bordered {
@@ -484,7 +533,6 @@
 
 </head>
 <body>
-  <nav style="height: 1em; padding:  0.25em; background: var(--font-color); color: var(--bg-color);"></nav>
   <div class="center-v" style="margin: 2em 0">
 
     <svg id="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 487 487" fill="none">
@@ -576,11 +624,11 @@
         <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#ff1b1b;fill:#46ff5a}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
         <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#001cff;fill:#000}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
         <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#ff1b1b;fill:#000}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
-        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#46ff5a;fill:#000}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>' class="bordered"></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#46ff5a;fill:#000}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
         <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#ff1b1b;fill:#001cff}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
-        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#46ff5a;fill:#001cff}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>' class="bordered"></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#46ff5a;fill:#001cff}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
         <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#000;fill:#001cff}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
-        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#46ff5a;fill:#ff1b1b}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>' class="bordered"></leader-svg>
+        <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#46ff5a;fill:#ff1b1b}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
         <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#000;fill:#ff1b1b}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
         <leader-svg svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 576"><style>*{stroke:#001cff;fill:#ff1b1b}</style><rect width="562" height="562" x="7" y="7" stroke-width="14"></rect><path d="M509.501 480H289.495H65L287.25 94.5L509.501 480Z" stroke-width="14"/><path d="M250 392.5C260.5 401.5 272.013 403.724 287.501 404.499C337.5 407 345.501 339.499 287.501 337.999C229.501 336.499 241 269 287.501 274.498C287.501 274.498 304 274.498 321 288.5" stroke-width="14" stroke-linecap="square"/><line x1="287" y1="245.5" x2="287" y2="430.5" stroke-width="14"/></svg>'></leader-svg>
       </div>
@@ -609,11 +657,43 @@
     <h1 class="slowBlink">$</h1>
   </section>
 
-  <section>
-    <p>Send ETH to pyramidgame.eth, get on the Leaderboard</p>
-    <p>All ETH sent to the Pyramid Game is split proportionally by the Leaders</p>
+  <section style="display: flex; justify-content: center;">
+
+    <ul>
+      <li>Send ETH to pyramidgame.eth</li>
+      <li>Get on the Leaderboard</li>
+      <li>Receive future payouts</li>
+    </ul>
   </section>
 
+
+  <section>
+    <nav>
+      <a href="">Send ETH</a>
+      <a href="">View Leaderboard</a>
+      <a href="">Docs</a>
+    </nav>
+  </section>
+
+  <!-- 1. How It Works -->
+  <section>
+    <connect-wallet>
+      <div slot="connected">
+        <div id="howItWorksSection"></div>
+      </div>
+    </connect-wallet>
+  </section>
+
+  <!-- 2. Send Input + Smart Messaging -->
+  <section>
+    <connect-wallet>
+      <div slot="connected">
+        <div id="sendEthSection" class="center-v" style="margin: 2em auto;"></div>
+      </div>
+    </connect-wallet>
+  </section>
+
+  <!-- 3. Leaderboard -->
   <section>
     <div class="center-v">
       <connect-wallet>
@@ -635,32 +715,30 @@
     </div>
   </section>
 
+  <!-- 4. GET STARTED / Connected User Info -->
   <section>
     <connect-wallet>
-      <div slot="connected">
-        <div id="userLeaderSection"></div>
+      <div slot="notConnected" class="center-v" style="margin: 2em auto;">
+        <h2>GET STARTED</h2>
+        <connect-button>
+          <button class="connectButton" slot="button" style="font-size: 1.5em;">Connect Wallet</button>
+          <div slot="loading" class="slowBlink" style="font-size: 1.5em">Connecting...</div>
+        </connect-button>
+      </div>
+
+      <div slot="connected" class="center-v" style="margin: 2em auto;">
+        <div id="connectedUserInfo"></div>
       </div>
     </connect-wallet>
   </section>
 
+  <!-- 5. User Section -->
   <section>
     <connect-wallet>
       <div slot="connected">
-        <div id="erc20Section"></div>
+        <div id="userSection"></div>
       </div>
     </connect-wallet>
-  </section>
-
-
-
-  <section>
-    <div class="center-v">
-      <connect-wallet>
-        <div slot="connected">
-          <div id="yourContributions" style="margin-top: 0em; border: 1.35em double; padding: 0.5em;"></div>
-        </div>
-      </connect-wallet>
-    </div>
   </section>
 
 
@@ -726,7 +804,7 @@
 
 
 <script type="module">
-  import {provider, etherscanAddr, addEtherscanLinks, ethVal} from './eth.js'
+  import {provider, etherscanAddr, addEtherscanLinks, ethVal, txValue} from './eth.js'
   import {CONTRACTS} from './contracts.js'
   import {$} from './$.js'
 
@@ -874,12 +952,150 @@
     const erc20Balance = ethVal(await PyramidGame.balanceOf(addr))
     const erc20BalanceInEth = erc20Balance / tokensPerEth
 
-    // Render user leader section
-    if (userTokens.length > 0) {
+    const userIsLeader = userTokens.length > 0
 
-      $.id('userLeaderSection').innerHTML = `
+    // Helper function for calculating distribution
+    const calculateProjection = (inputAmount) => {
+      if (!inputAmount || inputAmount <= 0) return null
+      return sortedLeaders.map(l => {
+        const share = (inputAmount * l.contribution) / contributionTotal
+        const percentage = (l.contribution / contributionTotal) * 100
+        return { ...l, share: share, percentage: percentage }
+      })
+    }
+
+    // === 1. How It Works Section ===
+    if (!userIsLeader) {
+      $.id('howItWorksSection').innerHTML = `
         <div class="section-box">
-          <h2>Your Leader Tokens</h2>
+          <h2>How It Works</h2>
+          <p>All contributions are split between the Leaders</p>
+          <p>The split is proportional to their total contributions</p>
+          <p style="margin-top: 1em;"><strong>Lowest Leader Amount:</strong> <span style="margin-right: 0.25em">Ξ</span>${lowestLeader.contribution.toFixed(4)}</p>
+          <p>If you contribute more than this amount, you become a Leader!</p>
+        </div>
+      `
+    } else {
+      $.id('howItWorksSection').innerHTML = ''
+    }
+
+    // === 2. Send ETH Section with Smart Messaging ===
+    const prettyAddr = await provider.formatAddr(addr)
+    $.id('sendEthSection').innerHTML = `
+      <div style="text-align: center; margin-bottom: 1em;">
+        <p><strong>Connected as:</strong> ${prettyAddr}</p>
+        ${erc20Balance > 0 ? `<p><strong>$PYRAMID Balance:</strong> ${erc20Balance.toFixed(4)} (<span style="margin-right: 0.25em">Ξ</span>${erc20BalanceInEth.toFixed(0)})</p>` : ''}
+      </div>
+      <div class="center">
+        <input id="sendEthInput" placeholder="0.01 Ξ" type="number" step="0.01" style="width:10.1em">
+        <button id="sendEthBtn" class="small-button">Send</button>
+      </div>
+      <div id="sendEthMessage" style="margin-top: 1em; max-width: 600px;"></div>
+      <div id="sendEthError" class="error-message"></div>
+    `
+
+    const updateSendMessage = () => {
+      const amount = parseFloat($.id('sendEthInput').value)
+      if (!amount || amount <= 0) {
+        $.id('sendEthMessage').innerHTML = ''
+        return
+      }
+
+      let message = ''
+
+      if (userIsLeader) {
+        const userTotalContribution = userTokens.reduce((sum, t) => sum + t.contribution, 0)
+        const newUserTotal = userTotalContribution + amount
+        const newContributionTotal = contributionTotal + amount
+        const newPercentage = (newUserTotal / newContributionTotal) * 100
+        message = `<p>Your new % of payouts will be: <strong>${newPercentage.toFixed(2)}%</strong></p>`
+      } else {
+        if (amount > lowestLeader.contribution) {
+          const newPercentage = (amount / (contributionTotal + amount)) * 100
+          message = `<p style="text-align: center"><strong>This would get you on the leaderboard!</strong></p>
+                     <p style="text-align: center">You would receive <strong>${newPercentage.toFixed(2)}%</strong> of future payouts</p>`
+        } else {
+          const newErc20BalanceInEth = erc20BalanceInEth + amount
+          message = `<p>Your new $PYRAMID balance: <strong>${(erc20Balance + (amount*tokensPerEth)).toFixed(4)}</strong> tokens (<span style="margin-right: 0.25em">Ξ</span>${newErc20BalanceInEth.toFixed(4)})</p>`
+          if (newErc20BalanceInEth > lowestLeader.contribution) {
+            message += `<p><strong>You would then be able to call "CLAIM LEADERSHIP" to get on the leaderboard!</strong></p>`
+          } else {
+            message += `<p>You need <span style="margin-right: 0.25em">Ξ</span>${(lowestLeader.contribution - newErc20BalanceInEth + 0.0001).toFixed(4)} more to claim leadership.</p>`
+          }
+        }
+      }
+
+      // Add projection table with arrow
+      const projection = calculateProjection(amount)
+      message += `
+        <div style="margin-top: 1em;">
+          <p style="text-align: center"><strong>How your Ξ${amount} would be split:</strong></p>
+          <div style="margin: 0.5em auto; width: 400px; max-width: 90vw;">
+            ${projection.map((l, index) => `
+              <div style="padding: 0.5em 0; ${index < projection.length - 1 ? 'border-bottom: 1px dashed;' : ''}">
+                <div style="display: flex; align-items: center; gap: 0.25em; margin-bottom: 0.25em;">
+                  <span style="display: inline-block; width: ${l.percentage}%; background: var(--font-color); height: 3px; border: 1px solid var(--font-color);"></span>
+                  <span style="font-size: 0.6em;">${l.percentage.toFixed(1)}%</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.25em;">
+                  <span><span style="margin-right: 0.25em">Ξ</span><strong>${l.share.toFixed(4)}</strong></span>
+                  <span>→</span>
+                  <span>${l.prettyAddrShort}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `
+
+      $.id('sendEthMessage').innerHTML = message
+    }
+
+    $.id('sendEthInput').oninput = updateSendMessage
+
+    $.id('sendEthBtn').onclick = async () => {
+      const amount = parseFloat($.id('sendEthInput').value)
+      if (!amount || amount <= 0) {
+        $.id('sendEthError').innerHTML = 'Please enter a valid amount'
+        return
+      }
+
+      $.id('sendEthError').innerHTML = 'Pending...'
+      try {
+        const tx = await PyramidGame.contribute(txValue(amount))
+        $.id('sendEthError').innerHTML = `<span class="blinkSlow">TX Pending.</span> <a href="https://${etherscanLink}/tx/${tx.hash}" target="_blank" rel="nofollow">View on etherscan</a>`
+        await tx.wait(1)
+        $.id('sendEthError').innerHTML = 'Success! Reloading...'
+        setTimeout(() => location.reload(), 2000)
+      } catch (e) {
+        $.id('sendEthError').innerHTML = e?.data?.message || e?.error?.message || e?.message || 'Something went wrong'
+        console.error(e)
+      }
+    }
+
+    // === 4. Connected User Info ===
+    $.id('connectedUserInfo').innerHTML = `
+      <div style="text-align: center;">
+        ${userTokens.length > 0 ? `
+          <p><strong>Leader tokens:</strong> ${userTokens.map(t => `#${t.tokenId}`).join(', ')}</p>
+        ` : ''}
+      </div>
+    `
+
+    // === 5. User Section ===
+    let userSectionHTML = ''
+
+    // If user IS a leader
+    if (userIsLeader) {
+      const userTotalContribution = userTokens.reduce((sum, t) => sum + t.contribution, 0)
+      const userPercentage = (userTotalContribution / contributionTotal) * 100
+
+      userSectionHTML += `
+        <div class="section-box">
+          <h2>You Are a Leader!</h2>
+          <p style="font-size: 1.5em;"><strong>You would receive ${userPercentage.toFixed(2)}%</strong> of future payouts</p>
+
+          <h3 style="margin-top: 2em;">Your Leader Tokens</h3>
           <div class="token-grid">
             ${userTokens.map(t => {
               const escapedSVG = t.svg.replace(/"/g, '&quot;')
@@ -892,6 +1108,7 @@
               `
             }).join('')}
           </div>
+
           ${erc20Balance > 0 ? `
             <div style="margin-top: 2em;">
               <h3>Add to Leader Contribution</h3>
@@ -906,36 +1123,13 @@
           ` : ''}
         </div>
       `
-
-      if (erc20Balance > 0) {
-        $.id('addContribBtn').onclick = async () => {
-          $.id('addContribError').innerHTML = 'Pending...'
-          try {
-            const tokenId = Number($.id('addContribTokenId').value)
-            const amount = parseFloat($.id('addContribAmount').value)
-            const tokenAmount = Math.floor(amount * tokensPerEth)
-
-            const tx = await PyramidGame.addToLeaderContributionBalance(tokenId, tokenAmount)
-            $.id('addContribError').innerHTML = `<span class="blinkSlow">TX Pending.</span> <a href="https://${etherscanLink}/tx/${tx.hash}" target="_blank" rel="nofollow">View on etherscan</a>`
-            await tx.wait(1)
-            $.id('addContribError').innerHTML = 'Success'
-            setTimeout(() => {
-              $.id('addContribError').innerHTML = ''
-              location.reload()
-            }, 2000)
-          } catch (e) {
-            $.id('addContribError').innerHTML = e?.data?.message || e?.error?.message || e?.message || 'Something went wrong'
-            console.error(e)
-          }
-        }
-      }
     }
 
-    // Render ERC20 section
+    // If user has ERC20 balance
     if (erc20Balance > 0) {
       const canClaimLeadership = erc20BalanceInEth > lowestLeader.contribution
 
-      $.id('erc20Section').innerHTML = `
+      userSectionHTML += `
         <div class="section-box">
           <h2>$PYRAMID Tokens</h2>
           <p style="font-size: 1.5em; margin: 0.5em 0;"><strong>${erc20BalanceInEth.toFixed(4)} Ξ</strong> worth of $PYRAMID</p>
@@ -970,6 +1164,46 @@
           </div>
         </div>
       `
+    }
+
+    // Check if PG has ETH balance
+    const pgBalance = ethVal(await provider.provider.getBalance(PyramidGame.address))
+    if (pgBalance > 0) {
+      userSectionHTML += `
+        <div class="section-box">
+          <h2>Force Distribution</h2>
+          <p>Pyramid Game contract balance: <span style="margin-right: 0.25em">Ξ</span>${pgBalance.toFixed(4)}</p>
+          <button id="forceDistributeBtn" class="tiny-button">Force Distribution</button>
+          <div id="forceDistributeError" class="error-message"></div>
+        </div>
+      `
+    }
+
+    $.id('userSection').innerHTML = userSectionHTML
+
+    // Wire up event handlers
+    if (userIsLeader && erc20Balance > 0) {
+      $.id('addContribBtn').onclick = async () => {
+        $.id('addContribError').innerHTML = 'Pending...'
+        try {
+          const tokenId = Number($.id('addContribTokenId').value)
+          const amount = parseFloat($.id('addContribAmount').value)
+          const tokenAmount = Math.floor(amount * tokensPerEth)
+
+          const tx = await PyramidGame.addToLeaderContributionBalance(tokenId, tokenAmount)
+          $.id('addContribError').innerHTML = `<span class="blinkSlow">TX Pending.</span> <a href="https://${etherscanLink}/tx/${tx.hash}" target="_blank" rel="nofollow">View on etherscan</a>`
+          await tx.wait(1)
+          $.id('addContribError').innerHTML = 'Success! Reloading...'
+          setTimeout(() => location.reload(), 2000)
+        } catch (e) {
+          $.id('addContribError').innerHTML = e?.data?.message || e?.error?.message || e?.message || 'Something went wrong'
+          console.error(e)
+        }
+      }
+    }
+
+    if (erc20Balance > 0) {
+      const canClaimLeadership = erc20BalanceInEth > lowestLeader.contribution
 
       if (canClaimLeadership) {
         $.id('claimLeadershipBtn').onclick = async () => {
@@ -997,11 +1231,8 @@
           const tx = await PyramidGame.transfer(to, tokenAmount)
           $.id('transferError').innerHTML = `<span class="blinkSlow">TX Pending.</span> <a href="https://${etherscanLink}/tx/${tx.hash}" target="_blank" rel="nofollow">View on etherscan</a>`
           await tx.wait(1)
-          $.id('transferError').innerHTML = 'Success'
-          setTimeout(() => {
-            $.id('transferError').innerHTML = ''
-            location.reload()
-          }, 2000)
+          $.id('transferError').innerHTML = 'Success! Reloading...'
+          setTimeout(() => location.reload(), 2000)
         } catch (e) {
           $.id('transferError').innerHTML = e?.data?.message || e?.error?.message || e?.message || 'Something went wrong'
           console.error(e)
@@ -1018,7 +1249,7 @@
           const tx = await PyramidGame.approve(spender, tokenAmount)
           $.id('approveError').innerHTML = `<span class="blinkSlow">TX Pending.</span> <a href="https://${etherscanLink}/tx/${tx.hash}" target="_blank" rel="nofollow">View on etherscan</a>`
           await tx.wait(1)
-          $.id('approveError').innerHTML = 'Success'
+          $.id('approveError').innerHTML = 'Success!'
           setTimeout(() => $.id('approveError').innerHTML = '', 4000)
         } catch (e) {
           $.id('approveError').innerHTML = e?.data?.message || e?.error?.message || e?.message || 'Something went wrong'
@@ -1026,6 +1257,23 @@
         }
       }
     }
+
+    if (pgBalance > 0) {
+      $.id('forceDistributeBtn').onclick = async () => {
+        $.id('forceDistributeError').innerHTML = 'Pending...'
+        try {
+          const tx = await PyramidGame.forceDistribution()
+          $.id('forceDistributeError').innerHTML = `<span class="blinkSlow">TX Pending.</span> <a href="https://${etherscanLink}/tx/${tx.hash}" target="_blank" rel="nofollow">View on etherscan</a>`
+          await tx.wait(1)
+          $.id('forceDistributeError').innerHTML = 'Success! Reloading...'
+          setTimeout(() => location.reload(), 2000)
+        } catch (e) {
+          $.id('forceDistributeError').innerHTML = e?.data?.message || e?.error?.message || e?.message || 'Something went wrong'
+          console.error(e)
+        }
+      }
+    }
+
 
     // Fetch and render contribution events
     const contributionEvents = await provider.contractEvents(PyramidGame, 'Contribution', [])
