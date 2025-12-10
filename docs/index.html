@@ -40,6 +40,8 @@
       text-align: center;
     }
 
+
+
     .slowBlink {
       animation: Blink 3s steps(2, start) infinite;
     }
@@ -299,6 +301,17 @@
       }
     }
 
+
+    #leaderboard-title {
+      font-size: 3em;
+    }
+
+    @media (max-width:  530px) {
+      #leaderboard-title {
+        font-size: 2em;
+      }
+    }
+
     @media (max-width: 580px) {
       .leaderboard-grid {
         grid-template-columns: 1fr;
@@ -309,15 +322,22 @@
       border: 6px solid var(--font-color);
       border-top-width: 0;
       padding: 1em;
-      display: flex;
       /*flex-direction: column;*/
-      align-items: center;
-      gap: 0.75em;
       /*background: var(--font-color);*/
       /*color: var(--bg-color);*/
     }
     .leader-card:first-child {
       border-top-width: 6px;
+    }
+    .leader-card h3 {
+      text-align: left;
+      margin-bottom: 0.25em;
+    }
+
+    .leader-card-content {
+      display: flex;
+      align-items: center;
+      gap: 0.75em;
 
     }
 
@@ -333,22 +353,27 @@
       display: block;
     }
 
-    @media (max-width: 480px) {
-      .leader-card {
+    @media (max-width: 510px) {
+      .leader-card-content {
         flex-direction: column;
         align-items: center;
         font-size: 0.9em;
       }
 
 
-      .leader-info h3 {
-        font-size: 1.1em;
+      .leader-card h3 {
+        font-size: 1em;
+        text-align: center;
       }
 
       .leader-info {
         display: flex;
         flex-direction: column;
         align-items: center;
+      }
+
+      .leader-info dd {
+        text-align: center;
       }
     }
 
@@ -459,8 +484,8 @@
 
 </head>
 <body>
-  <nav style="height: 1em; padding:  0.25em; background: var(--font-color); color: var(--bg-color);">$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$</nav>
-  <div class="center-v" style="height: 80vh;">
+  <nav style="height: 1em; padding:  0.25em; background: var(--font-color); color: var(--bg-color);"></nav>
+  <div class="center-v" style="margin: 2em 0">
 
     <svg id="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 487 487" fill="none">
       <path d="M465.001 435.5H244.995H20.5L242.75 50L465.001 435.5Z"  stroke-width="14"/>
@@ -585,13 +610,15 @@
   </section>
 
   <section>
-    <p>All ETH sent to the Pyramid Game is split proportionally among the Leaders</p>
+    <p>Send ETH to pyramidgame.eth, get on the Leaderboard</p>
+    <p>All ETH sent to the Pyramid Game is split proportionally by the Leaders</p>
   </section>
 
   <section>
     <div class="center-v">
       <connect-wallet>
         <div slot="connected">
+          <h2 id="leaderboard-title">Leaderboard</h2>
           <div id="leaderboardStats" style="text-align: center; margin: 1.5em auto; font-size: 1.2em;"></div>
           <div id="leaderboard" class="leaderboard-grid"></div>
         </div>
@@ -808,29 +835,32 @@
       const escapedSVG = l.svg.replace(/"/g, '&quot;')
       return `
         <div class="leader-card">
-          <leader-svg svg="${escapedSVG}" style="${[5,7,9].includes(l.tokenId) ? 'border: 1px solid' : ''}"></leader-svg>
-          <div class="leader-info">
-            <div><h3>Pyramid Game Leader #${l.tokenId}</h3></div>
-            <dl>
-              <dt>OWNER</dt>
-              <dd>
-                <span class="addr-short">${etherscanAddr(etherscanLink, l.owner, l.prettyAddrShort)}</span>
-                <span class="addr-full">${etherscanAddr(etherscanLink, l.owner, l.prettyAddr)}</span>
-              </dd>
-            </dl>
-            <div>
+          <h3>Pyramid Game Leader #${l.tokenId}</h3>
+          <div class="leader-card-content">
+            <leader-svg svg="${escapedSVG}" style="${[5,7,9].includes(l.tokenId) ? 'border: 1px solid' : ''}"></leader-svg>
+            <div class="leader-info">
               <dl>
-                <dt>PAID IN</dt>
+                <dt>OWNER</dt>
                 <dd>
-                  <span style="margin-right: 0.25em">Ξ</span><strong>${l.contribution.toFixed(4)}</strong>
+                  <span class="addr-short">${etherscanAddr(etherscanLink, l.owner, l.prettyAddrShort)}</span>
+                  <span class="addr-full">${etherscanAddr(etherscanLink, l.owner, l.prettyAddr)}</span>
                 </dd>
               </dl>
-              <dl>
-                <dt>% OF NEXT PAYOUT</dt>
-                <dd>
-                  <strong>${l.percentage.toFixed(2)}%</strong>
-                </dd>
-              </dl>
+              <div>
+                <dl>
+                  <dt>PAID IN</dt>
+                  <dd>
+                    <span style="margin-right: 0.25em">Ξ</span><strong>${l.contribution.toFixed(4)}</strong>
+                  </dd>
+                </dl>
+                <dl>
+                  <dt>% OF NEXT PAYOUT</dt>
+                  <dd>
+                    <strong>${l.percentage.toFixed(2)}%</strong>
+                  </dd>
+                </dl>
+              </div>
+              <strong style="font-size: 0.75em"><a href="" target="_blank" rel="nofollow">View on OpenSea →</a></strong>
             </div>
           </div>
         </div>

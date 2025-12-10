@@ -545,13 +545,18 @@ describe('PyramidGame', () => {
     })
 
     it('reverts when insufficient leaders sign (only 6 out of 12)', async () => {
-      // Create multiple leaders by having people contribute
+      // Create 12 leaders total (deployer already has 1, add 11 more)
       await PG(signers[1]).contribute(txValue(0.1))
       await PG(signers[2]).contribute(txValue(0.2))
       await PG(signers[3]).contribute(txValue(0.3))
       await PG(signers[4]).contribute(txValue(0.4))
       await PG(signers[5]).contribute(txValue(0.5))
       await PG(signers[6]).contribute(txValue(0.6))
+      await PG(signers[7]).contribute(txValue(0.7))
+      await PG(signers[8]).contribute(txValue(0.8))
+      await PG(signers[9]).contribute(txValue(0.9))
+      await PG(signers[10]).contribute(txValue(1.0))
+      await PG(signers[11]).contribute(txValue(1.1))
 
       // Deploy a new TokenURI contract to use as the new URI
       const TokenURIFactory = await ethers.getContractFactory('TokenURI', signers[0])
@@ -602,13 +607,18 @@ describe('PyramidGame', () => {
     })
 
     it('first participant cannot update wallet, but majority can, and new wallet can update URI', async () => {
-      // Create multiple leaders
+      // Create 12 leaders total (deployer already has 1, add 11 more)
       await PG(signers[1]).contribute(txValue(0.1))
       await PG(signers[2]).contribute(txValue(0.2))
       await PG(signers[3]).contribute(txValue(0.3))
       await PG(signers[4]).contribute(txValue(0.4))
       await PG(signers[5]).contribute(txValue(0.5))
       await PG(signers[6]).contribute(txValue(0.6))
+      await PG(signers[7]).contribute(txValue(0.7))
+      await PG(signers[8]).contribute(txValue(0.8))
+      await PG(signers[9]).contribute(txValue(0.9))
+      await PG(signers[10]).contribute(txValue(1.0))
+      await PG(signers[11]).contribute(txValue(1.1))
 
       // Get current wallet
       const oldWallet = await PyramidGame.wallet()
@@ -621,7 +631,6 @@ describe('PyramidGame', () => {
       // Test 2: Deploy a new wallet contract to use as the new wallet
       const PyramidGameWalletFactory = await ethers.getContractFactory('PyramidGameWallet', signers[0])
       const newWallet = await PyramidGameWalletFactory.deploy(
-        12, // SLOTS
         PyramidGame.address,
         PyramidGameLeaders.address,
         signers[0].address // parent - just use signers[0] for testing
@@ -717,6 +726,66 @@ describe('PyramidGame', () => {
       const finalURI = await PyramidGameLeaders.uri()
       expect(finalURI).to.equal(newURI.address)
       expect(finalURI).to.not.equal(oldURI)
+    })
+
+    it('with 4 leaders, 3 signatures (majority) should succeed', async () => {
+      // Create 4 leaders total (deployer already has 1, add 3 more)
+      await PG(signers[1]).contribute(txValue(0.1))
+      await PG(signers[2]).contribute(txValue(0.2))
+      await PG(signers[3]).contribute(txValue(0.3))
+
+      // Verify we have 4 leaders
+      const totalSupply = await PyramidGameLeaders.totalSupply()
+      expect(totalSupply).to.equal(4)
+
+      // Deploy a new TokenURI contract to test with
+      const TokenURIFactory = await ethers.getContractFactory('TokenURI', signers[0])
+      const newURI = await TokenURIFactory.deploy()
+      await newURI.deployed()
+
+      const wallet = await PyramidGame.wallet()
+
+      // Prepare the transaction data
+      const target = PyramidGameLeaders.address
+      const value = 0
+      const data = PyramidGameLeaders.interface.encodeFunctionData('updateURI', [newURI.address])
+      const txNonce = 4
+
+      // Create message hash
+      const messageHash = ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(
+          ['address', 'uint256', 'bytes', 'uint256'],
+          [target, value, data, txNonce]
+        )
+      )
+
+      // Get 3 leaders to sign (majority of 4 is > 2, so 3 is sufficient)
+      const leaderTokenIds = [0, 1, 2]
+      const signatures = []
+
+      for (let i = 0; i < leaderTokenIds.length; i++) {
+        const tokenId = leaderTokenIds[i]
+        const owner = await PyramidGameLeaders.ownerOf(tokenId)
+        const signer = signers.find(s => s.address === owner)
+
+        const signature = await signer.signMessage(ethers.utils.arrayify(messageHash))
+        signatures.push(signature)
+      }
+
+      // Execute should succeed with 3 out of 4 signatures
+      const PyramidGameWallet = await ethers.getContractAt('PyramidGameWallet', wallet)
+      await PyramidGameWallet.executeLeaderTransaction(
+        target,
+        value,
+        data,
+        txNonce,
+        leaderTokenIds,
+        signatures
+      )
+
+      // Verify the URI was updated
+      const updatedURI = await PyramidGameLeaders.uri()
+      expect(updatedURI).to.equal(newURI.address)
     })
   })
 
