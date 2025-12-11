@@ -427,7 +427,7 @@ contract PyramidGameLeaders is ERC721 {
 
   mapping(uint256 => LeaderData) private leaderData;
 
-  constructor(address deployer, uint256 slots, uint256 initialAmount) ERC721("Pyramid Game Leader", "LEADER") {
+  constructor(address deployer, uint256 slots, uint256 initialAmount) ERC721("Pyramid Game Leaderboard", "LEADER") {
     root = msg.sender;
     SLOTS = slots;
     uri = new TokenURI();
@@ -584,10 +584,10 @@ contract TokenURI {
 
     return string(abi.encodePacked(
       'data:application/json;utf8,'
-      '{"name": "', leaders.name(),' #', tokenString,
-      '", "description": "'
-      '", "license": "CC0'
-      '", "image": "', encodedSVG,
+      '{"name": "', leaders.name(),' Slot #', tokenString,
+      '", "description": "All ETH sent to Pyramid Game is split proportionally among the 12 Leaderboard slots based on their prior contributions.",'
+      '"license": "CC0",'
+      '"image": "', encodedSVG,
       '", "attributes": [{ "trait_type": "Leader Token Contributions", "value": "', Strings.toString(leaders.contributions(tokenId)), ' wei" }]'
       '}'
     ));

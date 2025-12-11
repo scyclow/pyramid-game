@@ -47,7 +47,7 @@
     }
 
     .mediumBlink {
-      animation: Blink 1.5s steps(2, start) infinite;
+      animation: Blink 1.5s steps(3, start) infinite;
     }
 
     #logo {
@@ -57,7 +57,7 @@
 
     button {
       background: var(--gray-color);
-      color: var(--font-color);
+      color: var(--black-color);
       border: 0.15em solid var(--font-color);
       padding: 0.5em 1em;
       font-size: 2em;
@@ -118,22 +118,40 @@
       padding: 0.5em;
       display: flex;
       justify-content: space-evenly;
+      font-size: 1.5em;
     }
 
     nav a {
       color: var(--bg-color);
     }
+    nav a:hover {
+      color: var(--accent-color);
+    }
+
+    @media(max-width: 740px) {
+      nav {
+        flex-direction: column;
+
+      }
+      nav > * {
+        padding: 0.25em 0;
+      }
+      nav > a + a {
+        border-top: 1px solid var(--bg-color);
+      }
+    }
 
     ul {
       font-weight: bolder;
-      font-size: 2em;
       list-style: none;
       padding: 0;
+      margin-left: 1.5em;
+      font-size: 1em;
 
     }
 
     ul li {
-      padding: 0.5em 0;
+      padding: 0.75em 0;
     }
 
     ul li::before {
@@ -144,19 +162,6 @@
       margin-left: -1em;
     }
 
-    @media (max-width: 750px) {
-      ul {
-        font-size: 1.5em;
-      }
-    }
-
-
-    @media (max-width: 580px) {
-      ul {
-        font-size: 1.25em;
-        margin-left: 1.5em;
-      }
-    }
     input {
       border: 3px solid var(--font-color);
       text-align: center;
@@ -215,22 +220,29 @@
       text-decoration: underline;
     }
 
-    .scanlink {
+    .scanlink-style {
       border-bottom: 0.1em solid rgba(0, 0, 0, 0);
       font-size: 1.75em;
     }
 
-    .scanlink:hover {
+    .scanlink-style:hover {
       text-decoration: none;
       border-bottom: 0.1em solid;
     }
 
+    .a-normal {
+      text-decoration: underline;
+    }
+    .a-normal:hover {
+      text-decoration: none;
+
+    }
 
     .largeText {
       font-size: 6em;
     }
     @media (max-width:  640px) {
-      .scanlink {
+      .scanlink-style {
         font-size: 1.25em;
       }
 
@@ -244,7 +256,7 @@
     }
 
     @media (max-width: 450px) {
-      .scanlink {
+      .scanlink-style {
         font-size: 0.9em;
       }
     }
@@ -397,7 +409,7 @@
     .leader-card img,
     .leader-card leader-svg {
       width: 100%;
-      max-width: 9em;
+      max-width: 8.95em;
       height: auto;
       display: block;
     }
@@ -585,7 +597,7 @@
 
 
     <h2 style="display: flex; align-items: center; justify-content: center; margin: 1em 0">
-      <a class="scanlink">
+      <a class="scanlink scanlink-style">
         pyramidgame.eth<svg xmlns="http://www.w3.org/2000/svg" width="0.6em" viewBox="0 0 156 184" fill="none" style="margin-left: 0.25em; margin-top: 0em;">
           <rect x="6" y="6" width="144" height="172" stroke-width="23"/>
           <path d="M32 52H124" stroke-width="15"/>
@@ -640,11 +652,11 @@
       </svg>
     </div>
 
-    <div style="margin: 3em; display: flex; justify-content: center;">
+    <div style="margin: 4em 0; display: flex; justify-content: center;">
       <svg style="height: 100%; width: 220px; max-width: 27.5vw;" xmlns="http://www.w3.org/2000/svg" width="318" height="318" viewBox="0 0 318 318" fill="none">
-        <path class="mediumBlink" style="animation-delay: 0s;" d="M317.241 228.479L317.241 141.876L242.242 185.178L317.241 228.479ZM187.494 3.75L180.999 7.5L276.996 173.772L283.491 170.022L289.987 166.272L193.989 6.70552e-07L187.494 3.75Z" fill="black"/>
-        <path class="mediumBlink" style="animation-delay: -0.5s;" d="M136.243 3.75623L61.243 47.0575L136.243 90.3588L136.243 3.75623ZM6.49609 228.484L12.9913 232.234L108.988 65.9629L102.493 62.2129L95.9978 58.4629L0.000903785 224.734L6.49609 228.484Z" fill="black"/>
-        <path class="mediumBlink" style="animation-delay: -1s;" d="M28.8927 274.615L103.893 317.916L103.893 231.314L28.8927 274.615ZM293.893 274.615V267.115L96.3927 267.115V274.615V282.115L293.893 282.115V274.615Z" fill="black"/>
+        <path class="mediumBlink" style="animation-delay: 0s;" d="M317.241 228.479L317.241 141.876L242.242 185.178L317.241 228.479ZM187.494 3.75L180.999 7.5L276.996 173.772L283.491 170.022L289.987 166.272L193.989 6.70552e-07L187.494 3.75Z" fill="var(--font-color)"/>
+        <path class="mediumBlink" style="animation-delay: -0.5s;" d="M136.243 3.75623L61.243 47.0575L136.243 90.3588L136.243 3.75623ZM6.49609 228.484L12.9913 232.234L108.988 65.9629L102.493 62.2129L95.9978 58.4629L0.000903785 224.734L6.49609 228.484Z" fill="var(--font-color)"/>
+        <path class="mediumBlink" style="animation-delay: -1s;" d="M28.8927 274.615L103.893 317.916L103.893 231.314L28.8927 274.615ZM293.893 274.615V267.115L96.3927 267.115V274.615V282.115L293.893 282.115V274.615Z" fill="var(--font-color)"/>
       </svg>
     </div>
 
@@ -657,21 +669,21 @@
     <h1 class="slowBlink">$</h1>
   </section>
 
-  <section style="display: flex; justify-content: center;">
+<!--   <section style="display: flex; justify-content: center;">
 
     <ul>
-      <li>Send ETH to pyramidgame.eth</li>
-      <li>Get on the Leaderboard</li>
-      <li>Receive future payouts</li>
+      <li>Send ETH to <a class="scanlink a-normal">pyramidgame.eth</a></li>
+      <li>Get on the <a href="#leaderboard">Leaderboard</a></li>
+      <li>Receive future payouts<sup><a href="#disclaimer">*</a></sup></li>
     </ul>
-  </section>
+  </section> -->
 
 
   <section>
     <nav>
-      <a href="">Send ETH</a>
-      <a href="">View Leaderboard</a>
-      <a href="">Docs</a>
+      <a href="">Send ETH →</a>
+      <a href="">View Leaderboard →</a>
+      <a href="">Docs →</a>
     </nav>
   </section>
 
@@ -679,7 +691,17 @@
   <section>
     <connect-wallet>
       <div slot="connected">
-        <div id="howItWorksSection"></div>
+        <div id="howItWorksSection">
+          <div class="section-box">
+            <h2>How It Works</h2>
+            <ul>
+              <li>Pyramid Game uses cutting edge pyramid scheme technology to redistribute value between players.</li>
+              <li>All ETH sent to Pyramid Game is split proportionally among the 12 <a href="#leaderboard" class="a-normal">Leaderboard</a> members based on their prior contributions.</li>
+              <li>All Leaderboard positions are represented by NFTs, and all contributions from non-leaders are represented by the $PYRAMID token.</li>
+            </ul>
+            <a href="#docs" class="a-normal" style="margin-left: 1.5em;">Learn More →</a>
+          </div>
+        </div>
       </div>
     </connect-wallet>
   </section>
@@ -694,13 +716,13 @@
   </section>
 
   <!-- 3. Leaderboard -->
-  <section>
+  <section id="leaderboard">
     <div class="center-v">
       <connect-wallet>
         <div slot="connected">
           <h2 id="leaderboard-title">Leaderboard</h2>
           <div id="leaderboardStats" style="text-align: center; margin: 1.5em auto; font-size: 1.2em;"></div>
-          <div id="leaderboard" class="leaderboard-grid"></div>
+          <div id="leaderboard-board" class="leaderboard-grid"></div>
         </div>
 
         <div slot="notConnected">
@@ -742,21 +764,14 @@
   </section>
 
 
-  <section class="center-v">
-  </section>
-
-
-  <section class="center-v" id="faq">
-    <h2>???</h2>
-    <p>All ETH sent to the Pyramid Game is split between the Leaders.</p>
-    <p>Leaders are determined by </p>
-  </section>
-
   <section class="center-v" id="distributions">
     <h2>Latest Distributions</h2>
   </section>
 
 
+  <section class="center-v" id="disclaimer">
+    <p>All players of Pyramid Game understand that (a) only leaderboard members will receive a portion of Pyramid Game distributions, (b) all distribution amounts are determined by </p>
+  </section>
 
   <footer style="margin: 4em auto;"><a href="https://steviep.xyz" target="_blank" style="text-decoration: underline;">steviep.xyz</a> 2025</footer>
 
@@ -909,11 +924,11 @@
     `
 
     // Render leaderboard grid
-    $.id('leaderboard').innerHTML = sortedLeaders.map(l => {
+    $.id('leaderboard-board').innerHTML = sortedLeaders.map(l => {
       const escapedSVG = l.svg.replace(/"/g, '&quot;')
       return `
         <div class="leader-card">
-          <h3>Pyramid Game Leader #${l.tokenId}</h3>
+          <h3>Pyramid Game Leaderboard Slot #${l.tokenId}</h3>
           <div class="leader-card-content">
             <leader-svg svg="${escapedSVG}" style="${[5,7,9].includes(l.tokenId) ? 'border: 1px solid' : ''}"></leader-svg>
             <div class="leader-info">
@@ -926,7 +941,7 @@
               </dl>
               <div>
                 <dl>
-                  <dt>PAID IN</dt>
+                  <dt>SENT</dt>
                   <dd>
                     <span style="margin-right: 0.25em">Ξ</span><strong>${l.contribution.toFixed(4)}</strong>
                   </dd>
@@ -964,26 +979,12 @@
       })
     }
 
-    // === 1. How It Works Section ===
-    if (!userIsLeader) {
-      $.id('howItWorksSection').innerHTML = `
-        <div class="section-box">
-          <h2>How It Works</h2>
-          <p>All contributions are split between the Leaders</p>
-          <p>The split is proportional to their total contributions</p>
-          <p style="margin-top: 1em;"><strong>Lowest Leader Amount:</strong> <span style="margin-right: 0.25em">Ξ</span>${lowestLeader.contribution.toFixed(4)}</p>
-          <p>If you contribute more than this amount, you become a Leader!</p>
-        </div>
-      `
-    } else {
-      $.id('howItWorksSection').innerHTML = ''
-    }
 
     // === 2. Send ETH Section with Smart Messaging ===
     const prettyAddr = await provider.formatAddr(addr)
     $.id('sendEthSection').innerHTML = `
       <div style="text-align: center; margin-bottom: 1em;">
-        <p><strong>Connected as:</strong> ${prettyAddr}</p>
+        <h3><strong>Connected as:</strong> ${prettyAddr}</h3>
         ${erc20Balance > 0 ? `<p><strong>$PYRAMID Balance:</strong> ${erc20Balance.toFixed(4)} (<span style="margin-right: 0.25em">Ξ</span>${erc20BalanceInEth.toFixed(0)})</p>` : ''}
       </div>
       <div class="center">
@@ -1008,7 +1009,7 @@
         const newUserTotal = userTotalContribution + amount
         const newContributionTotal = contributionTotal + amount
         const newPercentage = (newUserTotal / newContributionTotal) * 100
-        message = `<p>Your new % of payouts will be: <strong>${newPercentage.toFixed(2)}%</strong></p>`
+        message = `<p>This will increase your : <strong>${newPercentage.toFixed(2)}%</strong></p>`
       } else {
         if (amount > lowestLeader.contribution) {
           const newPercentage = (amount / (contributionTotal + amount)) * 100
@@ -1016,11 +1017,11 @@
                      <p style="text-align: center">You would receive <strong>${newPercentage.toFixed(2)}%</strong> of future payouts</p>`
         } else {
           const newErc20BalanceInEth = erc20BalanceInEth + amount
-          message = `<p>Your new $PYRAMID balance: <strong>${(erc20Balance + (amount*tokensPerEth)).toFixed(4)}</strong> tokens (<span style="margin-right: 0.25em">Ξ</span>${newErc20BalanceInEth.toFixed(4)})</p>`
+          message = `<p>You will receive <strong>${(amount * tokensPerEth).toFixed(4)}</strong> $PYRAMID from this transaction</p>`
           if (newErc20BalanceInEth > lowestLeader.contribution) {
-            message += `<p><strong>You would then be able to call "CLAIM LEADERSHIP" to get on the leaderboard!</strong></p>`
+            message += `<p><strong>You would then be able to call "CLAIM LEADERSHIP" to enter the leaderboard!</strong></p>`
           } else {
-            message += `<p>You need <span style="margin-right: 0.25em">Ξ</span>${(lowestLeader.contribution - newErc20BalanceInEth + 0.0001).toFixed(4)} more to claim leadership.</p>`
+            message += `<p>You need to send at least <strong><span style="margin-right: 0.25em">Ξ</span>${(lowestLeader.contribution + 0.0001).toFixed(4)}</strong> to enter the leaderboard.</p>`
           }
         }
       }
@@ -1039,7 +1040,7 @@
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.25em;">
                   <span><span style="margin-right: 0.25em">Ξ</span><strong>${l.share.toFixed(4)}</strong></span>
-                  <span>→</span>
+                  <span style="font-size: 1.5em; padding: 0 1em">→</span>
                   <span>${l.prettyAddrShort}</span>
                 </div>
               </div>
