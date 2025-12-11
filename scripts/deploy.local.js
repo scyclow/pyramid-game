@@ -27,7 +27,7 @@ async function main() {
   await PG(13).contribute(txValue(1.6))
 
   // signer[0] contributes 0.5 ETH - gets PYRAMID tokens (not a leader yet)
-  await PG(0).contribute(txValue(0.5))
+  await PG(0).contribute(txValue(0.4))
 
   // Now signer[0] has 0.5 ETH worth of PYRAMID
   // Lowest leader (signer[1]) has 0.01 ETH

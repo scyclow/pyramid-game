@@ -521,13 +521,6 @@
       flex-wrap: wrap;
     }
 
-    .error-message {
-      color: var(--red-color);
-      margin-top: 0.5em;
-      min-height: 1.5em;
-      font-size: 0.9em;
-    }
-
     .blinkSlow {
       animation: Blink 2s steps(2, start) infinite;
     }
@@ -854,45 +847,74 @@
   customElements.define('leader-svg', LeaderSVG)
 
   provider.setContractInfo(CONTRACTS)
-
   addEtherscanLinks('scanlink', 'PyramidGame')
 
-  provider.onConnect(async (addr) => {
+  // Helper functions
+  const utf8Clean = raw => raw.replace(/data.*utf8,/, '')
+  const b64Clean = raw => raw.replace(/data.*,/, '')
+
+  const extractSVG = rawURI => {
+    try {
+      const imageDataURI = JSON.parse(utf8Clean(rawURI)).image
+      const svgMarkup = atob(b64Clean(imageDataURI))
+      return svgMarkup
+    } catch (e) {
+      console.error('Error extracting SVG:', e)
+      return ''
+    }
+  }
+
+  const timeAgo = timestamp => {
+    const now = Date.now()
+    const diff = Math.floor((now - timestamp) / 1000)
+
+    if (diff < 60) return `${diff} second${diff === 1 ? '' : 's'} ago`
+    if (diff < 3600) {
+      const mins = Math.floor(diff / 60)
+      return `${mins} minute${mins === 1 ? '' : 's'} ago`
+    }
+    if (diff < 86400) {
+      const hours = Math.floor(diff / 3600)
+      return `${hours} hour${hours === 1 ? '' : 's'} ago`
+    }
+    if (diff < 31536000) {
+      const days = Math.floor(diff / 86400)
+      return `${days} day${days === 1 ? '' : 's'} ago`
+    }
+    const years = Math.floor(diff / 31536000)
+    return `${years} year${years === 1 ? '' : 's'} ago`
+  }
+
+  const calculateProjection = (sortedLeaders, contributionTotal) => (inputAmount) => {
+    if (!inputAmount || inputAmount <= 0) return null
+    return sortedLeaders.map(l => {
+      const share = (inputAmount * l.contribution) / contributionTotal
+      const percentage = (l.contribution / contributionTotal) * 100
+      return { ...l, share: share, percentage: percentage }
+    })
+  }
+
+  // Main render function
+  async function renderPage(addr) {
+    // === Fetch all data ===
     const { PyramidGame } = await provider.getContracts()
     const { name: chainName, etherscanLink } = await provider.getNetwork()
 
-    // Get PyramidGameLeaders contract
     const leadersAddr = await PyramidGame.leaders()
     const PyramidGameLeaders = await provider.contract(leadersAddr, CONTRACTS.PyramidGameLeaders.abi)
 
-    // Get total supply of leader tokens
-    const totalSupply = Number(await PyramidGameLeaders.totalSupply())
-    const contributionTotal = ethVal(await PyramidGameLeaders.contributionTotal())
-
-    // Helper to extract SVG markup from tokenURI
-    const utf8Clean = raw => raw.replace(/data.*utf8,/, '')
-    const b64Clean = raw => raw.replace(/data.*,/, '')
-
-    const extractSVG = rawURI => {
-      try {
-        const imageDataURI = JSON.parse(utf8Clean(rawURI)).image
-        const svgMarkup = atob(b64Clean(imageDataURI))
-        return svgMarkup
-      } catch (e) {
-        console.error('Error extracting SVG:', e)
-        return ''
-      }
-    }
+    const activeLeaderse = Number(await PyramidGameLeaders.totalSupply())
+    const leaderContributionTotal = ethVal(await PyramidGameLeaders.contributionTotal())
 
     // Fetch all leader data
-    const leaders = await Promise.all(times(totalSupply, async i => {
+    const leaders = await Promise.all(times(activeLeaderse, async i => {
       const owner = await PyramidGameLeaders.ownerOf(i)
       const prettyAddrShort = await provider.formatAddr(owner)
       const prettyAddr = await provider.formatAddr(owner, false)
       const contribution = ethVal(await PyramidGameLeaders.contributions(i))
       const tokenURI = await PyramidGameLeaders.tokenURI(i)
       const svg = extractSVG(tokenURI)
-      const percentage = (contribution / contributionTotal) * 100
+      const percentage = (contribution / leaderContributionTotal) * 100
 
       return {
         tokenId: i,
@@ -910,15 +932,13 @@
     const lowestLeader = sortedLeaders[sortedLeaders.length - 1]
 
     // Calculate total contributions
-    const tokensPerEth = Number(await PyramidGame.TOKENS_PER_ETH())
     const pyramidTotalSupply = ethVal(await PyramidGame.totalSupply())
-    const pyramidSupplyInEth = pyramidTotalSupply / tokensPerEth
-    const totalContributed = contributionTotal + pyramidSupplyInEth
+    const totalContributed = leaderContributionTotal + pyramidTotalSupply
 
     // Render stats
     $.id('leaderboardStats').innerHTML = `
       <div style="display: flex; justify-content: center; gap: 2em; flex-wrap: wrap;">
-        <div><strong>Sent by Leaders:</strong> <span style="margin-right: 0.25em">Ξ</span>${contributionTotal.toFixed(4)}</div>
+        <div><strong>Sent by Leaders:</strong> <span style="margin-right: 0.25em">Ξ</span>${leaderContributionTotal.toFixed(4)}</div>
         <div><strong>Total Sent:</strong> <span style="margin-right: 0.25em">Ξ</span>${totalContributed.toFixed(4)}</div>
       </div>
     `
@@ -965,27 +985,17 @@
 
     // Get user's ERC20 balance
     const erc20Balance = ethVal(await PyramidGame.balanceOf(addr))
-    const erc20BalanceInEth = erc20Balance / tokensPerEth
 
     const userIsLeader = userTokens.length > 0
-
-    // Helper function for calculating distribution
-    const calculateProjection = (inputAmount) => {
-      if (!inputAmount || inputAmount <= 0) return null
-      return sortedLeaders.map(l => {
-        const share = (inputAmount * l.contribution) / contributionTotal
-        const percentage = (l.contribution / contributionTotal) * 100
-        return { ...l, share: share, percentage: percentage }
-      })
-    }
-
+    const getProjection = calculateProjection(sortedLeaders, leaderContributionTotal)
 
     // === 2. Send ETH Section with Smart Messaging ===
     const prettyAddr = await provider.formatAddr(addr)
     $.id('sendEthSection').innerHTML = `
       <div style="text-align: center; margin-bottom: 1em;">
         <h3><strong>Connected as:</strong> ${prettyAddr}</h3>
-        ${erc20Balance > 0 ? `<p><strong>$PYRAMID Balance:</strong> ${erc20Balance.toFixed(4)} (<span style="margin-right: 0.25em">Ξ</span>${erc20BalanceInEth.toFixed(0)})</p>` : ''}
+        ${!userIsLeader ? `<p>Lowest Leaderboard contribution: <strong><span style="margin-right: 0.25em">Ξ</span>${lowestLeader.contribution.toFixed(4)}</strong></p>` : ''}
+        ${erc20Balance > 0 ? `<p>Your $PYRAMID Balance: <strong>${erc20Balance.toFixed(4)}</strong></p>` : ''}
       </div>
       <div class="center">
         <input id="sendEthInput" placeholder="0.01 Ξ" type="number" step="0.01" style="width:10.1em">
@@ -1002,35 +1012,34 @@
         return
       }
 
+      const newErc20Balance = erc20Balance + amount
+
       let message = ''
 
       if (userIsLeader) {
         const userTotalContribution = userTokens.reduce((sum, t) => sum + t.contribution, 0)
         const newUserTotal = userTotalContribution + amount
-        const newContributionTotal = contributionTotal + amount
+        const newContributionTotal = leaderContributionTotal + amount
         const newPercentage = (newUserTotal / newContributionTotal) * 100
-        message = `<p>This will increase your : <strong>${newPercentage.toFixed(2)}%</strong></p>`
+        message = `<p style="text-align: center">This transaction would increase your distribution payout to <strong>${newPercentage.toFixed(2)}%</strong>.</p>`
       } else {
-        if (amount > lowestLeader.contribution) {
-          const newPercentage = (amount / (contributionTotal + amount)) * 100
-          message = `<p style="text-align: center"><strong>This would get you on the leaderboard!</strong></p>
-                     <p style="text-align: center">You would receive <strong>${newPercentage.toFixed(2)}%</strong> of future payouts</p>`
+        if (newErc20Balance > lowestLeader.contribution) {
+          const newPercentage = (amount / (leaderContributionTotal + amount)) * 100
+          message = `<p style="text-align: center"><strong>This transaction would give you a Leaderboard slot.</strong></p>
+                    ${erc20Balance ? `<p style="text-align: center">(Your balance of <strong>${erc20Balance.toFixed(4)} $PYRAMID</strong> will burned)</p>` : ''}
+                     <p style="text-align: center">You would receive <strong>${newPercentage.toFixed(2)}%</strong> of future payouts.</p>`
         } else {
-          const newErc20BalanceInEth = erc20BalanceInEth + amount
-          message = `<p>You will receive <strong>${(amount * tokensPerEth).toFixed(4)}</strong> $PYRAMID from this transaction</p>`
-          if (newErc20BalanceInEth > lowestLeader.contribution) {
-            message += `<p><strong>You would then be able to call "CLAIM LEADERSHIP" to enter the leaderboard!</strong></p>`
-          } else {
-            message += `<p>You need to send at least <strong><span style="margin-right: 0.25em">Ξ</span>${(lowestLeader.contribution + 0.0001).toFixed(4)}</strong> to enter the leaderboard.</p>`
-          }
+          message = `<p style="text-align: center">This is not enough to enter the Leaderboard. You would need to send at least <strong><span style="margin-right: 0.25em">Ξ</span>${(lowestLeader.contribution + 0.0001 - erc20Balance).toFixed(4)}</strong>.</p> <p style="text-align: center">However, you would receive <strong>${amount.toFixed(4)} $PYRAMID</strong> from this transaction.</p>`
         }
       }
 
+      message = `<div style="margin-top: 1.5em; margin-bottom: 3em">${message}</div>`
+
       // Add projection table with arrow
-      const projection = calculateProjection(amount)
+      const projection = getProjection(amount)
       message += `
         <div style="margin-top: 1em;">
-          <p style="text-align: center"><strong>How your Ξ${amount} would be split:</strong></p>
+          <p style="text-align: center"><strong>Your Ξ${amount} would be split ${activeLeaderse} ways:</strong></p>
           <div style="margin: 0.5em auto; width: 400px; max-width: 90vw;">
             ${projection.map((l, index) => `
               <div style="padding: 0.5em 0; ${index < projection.length - 1 ? 'border-bottom: 1px dashed;' : ''}">
@@ -1055,6 +1064,7 @@
     $.id('sendEthInput').oninput = updateSendMessage
 
     $.id('sendEthBtn').onclick = async () => {
+      $.id('sendEthMessage').innerHTML = ''
       const amount = parseFloat($.id('sendEthInput').value)
       if (!amount || amount <= 0) {
         $.id('sendEthError').innerHTML = 'Please enter a valid amount'
@@ -1066,8 +1076,11 @@
         const tx = await PyramidGame.contribute(txValue(amount))
         $.id('sendEthError').innerHTML = `<span class="blinkSlow">TX Pending.</span> <a href="https://${etherscanLink}/tx/${tx.hash}" target="_blank" rel="nofollow">View on etherscan</a>`
         await tx.wait(1)
-        $.id('sendEthError').innerHTML = 'Success! Reloading...'
-        setTimeout(() => location.reload(), 2000)
+        renderPage(addr)
+        $.id('sendEthError').innerHTML = 'Success!'
+        setTimeout(() => {
+          $.id('sendEthError').innerHTML = ''
+        }, 2000)
       } catch (e) {
         $.id('sendEthError').innerHTML = e?.data?.message || e?.error?.message || e?.message || 'Something went wrong'
         console.error(e)
@@ -1089,7 +1102,7 @@
     // If user IS a leader
     if (userIsLeader) {
       const userTotalContribution = userTokens.reduce((sum, t) => sum + t.contribution, 0)
-      const userPercentage = (userTotalContribution / contributionTotal) * 100
+      const userPercentage = (userTotalContribution / leaderContributionTotal) * 100
 
       userSectionHTML += `
         <div class="section-box">
@@ -1113,7 +1126,7 @@
           ${erc20Balance > 0 ? `
             <div style="margin-top: 2em;">
               <h3>Add to Leader Contribution</h3>
-              <p>You have ${erc20BalanceInEth.toFixed(4)} Ξ worth of $PYRAMID tokens</p>
+              <p>You have ${erc20Balance.toFixed(4)} Ξ worth of $PYRAMID tokens</p>
               <div class="control-row">
                 <input id="addContribTokenId" class="tiny-input" placeholder="Token ID" style="width: 8em;">
                 <input id="addContribAmount" class="tiny-input" placeholder="Amount (Ξ)" style="width: 8em;">
@@ -1128,12 +1141,12 @@
 
     // If user has ERC20 balance
     if (erc20Balance > 0) {
-      const canClaimLeadership = erc20BalanceInEth > lowestLeader.contribution
+      const canClaimLeadership = erc20Balance > lowestLeader.contribution
 
       userSectionHTML += `
         <div class="section-box">
           <h2>$PYRAMID Tokens</h2>
-          <p style="font-size: 1.5em; margin: 0.5em 0;"><strong>${erc20BalanceInEth.toFixed(4)} Ξ</strong> worth of $PYRAMID</p>
+          <p style="font-size: 1.5em; margin: 0.5em 0;"><strong>${erc20Balance.toFixed(4)} Ξ</strong> worth of $PYRAMID</p>
 
           ${canClaimLeadership ? `
             <div style="margin-top: 1.5em; padding: 1em; border: 2px solid var(--accent-color);">
@@ -1189,13 +1202,16 @@
         try {
           const tokenId = Number($.id('addContribTokenId').value)
           const amount = parseFloat($.id('addContribAmount').value)
-          const tokenAmount = Math.floor(amount * tokensPerEth)
+          const tokenAmount = Math.floor(amount)
 
           const tx = await PyramidGame.addToLeaderContributionBalance(tokenId, tokenAmount)
           $.id('addContribError').innerHTML = `<span class="blinkSlow">TX Pending.</span> <a href="https://${etherscanLink}/tx/${tx.hash}" target="_blank" rel="nofollow">View on etherscan</a>`
           await tx.wait(1)
-          $.id('addContribError').innerHTML = 'Success! Reloading...'
-          setTimeout(() => location.reload(), 2000)
+          renderPage(addr)
+          $.id('addContribError').innerHTML = 'Success!'
+          setTimeout(() => {
+            $.id('addContribError').innerHTML = ''
+          }, 2000)
         } catch (e) {
           $.id('addContribError').innerHTML = e?.data?.message || e?.error?.message || e?.message || 'Something went wrong'
           console.error(e)
@@ -1204,7 +1220,7 @@
     }
 
     if (erc20Balance > 0) {
-      const canClaimLeadership = erc20BalanceInEth > lowestLeader.contribution
+      const canClaimLeadership = erc20Balance > lowestLeader.contribution
 
       if (canClaimLeadership) {
         $.id('claimLeadershipBtn').onclick = async () => {
@@ -1213,8 +1229,11 @@
             const tx = await PyramidGame.claimLeadership()
             $.id('claimError').innerHTML = `<span class="blinkSlow">TX Pending.</span> <a href="https://${etherscanLink}/tx/${tx.hash}" target="_blank" rel="nofollow">View on etherscan</a>`
             await tx.wait(1)
-            $.id('claimError').innerHTML = 'Success! Reloading...'
-            setTimeout(() => location.reload(), 2000)
+            renderPage(addr)
+            $.id('claimError').innerHTML = 'Success!'
+            setTimeout(() => {
+              $.id('claimError').innerHTML = ''
+            }, 2000)
           } catch (e) {
             $.id('claimError').innerHTML = e?.data?.message || e?.error?.message || e?.message || 'Something went wrong'
             console.error(e)
@@ -1227,13 +1246,16 @@
         try {
           const to = $.id('transferTo').value
           const amount = parseFloat($.id('transferAmount').value)
-          const tokenAmount = Math.floor(amount * tokensPerEth)
+          const tokenAmount = Math.floor(amount)
 
           const tx = await PyramidGame.transfer(to, tokenAmount)
           $.id('transferError').innerHTML = `<span class="blinkSlow">TX Pending.</span> <a href="https://${etherscanLink}/tx/${tx.hash}" target="_blank" rel="nofollow">View on etherscan</a>`
           await tx.wait(1)
-          $.id('transferError').innerHTML = 'Success! Reloading...'
-          setTimeout(() => location.reload(), 2000)
+          renderPage(addr)
+          $.id('transferError').innerHTML = 'Success!'
+          setTimeout(() => {
+            $.id('transferError').innerHTML = ''
+          }, 2000)
         } catch (e) {
           $.id('transferError').innerHTML = e?.data?.message || e?.error?.message || e?.message || 'Something went wrong'
           console.error(e)
@@ -1245,12 +1267,13 @@
         try {
           const spender = $.id('approveSpender').value
           const amount = parseFloat($.id('approveAmount').value)
-          const tokenAmount = Math.floor(amount * tokensPerEth)
+          const tokenAmount = Math.floor(amount)
 
           const tx = await PyramidGame.approve(spender, tokenAmount)
           $.id('approveError').innerHTML = `<span class="blinkSlow">TX Pending.</span> <a href="https://${etherscanLink}/tx/${tx.hash}" target="_blank" rel="nofollow">View on etherscan</a>`
+        $.id('approveError').innerHTML = 'Success!'
           await tx.wait(1)
-          $.id('approveError').innerHTML = 'Success!'
+          $.id('approveError').innerHTML = ''
           setTimeout(() => $.id('approveError').innerHTML = '', 4000)
         } catch (e) {
           $.id('approveError').innerHTML = e?.data?.message || e?.error?.message || e?.message || 'Something went wrong'
@@ -1266,8 +1289,11 @@
           const tx = await PyramidGame.forceDistribution()
           $.id('forceDistributeError').innerHTML = `<span class="blinkSlow">TX Pending.</span> <a href="https://${etherscanLink}/tx/${tx.hash}" target="_blank" rel="nofollow">View on etherscan</a>`
           await tx.wait(1)
-          $.id('forceDistributeError').innerHTML = 'Success! Reloading...'
-          setTimeout(() => location.reload(), 2000)
+          renderPage(addr)
+          $.id('forceDistributeError').innerHTML = 'Success!'
+          setTimeout(() => {
+            $.id('forceDistributeError').innerHTML = ''
+          }, 2000)
         } catch (e) {
           $.id('forceDistributeError').innerHTML = e?.data?.message || e?.error?.message || e?.message || 'Something went wrong'
           console.error(e)
@@ -1279,27 +1305,6 @@
     // Fetch and render contribution events
     const contributionEvents = await provider.contractEvents(PyramidGame, 'Contribution', [])
     const recentContributions = contributionEvents.slice(-20) // Last 20, oldest first
-
-    const timeAgo = timestamp => {
-      const now = Date.now()
-      const diff = Math.floor((now - timestamp) / 1000) // difference in seconds
-
-      if (diff < 60) return `${diff} second${diff === 1 ? '' : 's'} ago`
-      if (diff < 3600) {
-        const mins = Math.floor(diff / 60)
-        return `${mins} minute${mins === 1 ? '' : 's'} ago`
-      }
-      if (diff < 86400) {
-        const hours = Math.floor(diff / 3600)
-        return `${hours} hour${hours === 1 ? '' : 's'} ago`
-      }
-      if (diff < 31536000) {
-        const days = Math.floor(diff / 86400)
-        return `${days} day${days === 1 ? '' : 's'} ago`
-      }
-      const years = Math.floor(diff / 31536000)
-      return `${years} year${years === 1 ? '' : 's'} ago`
-    }
 
     if (recentContributions.length > 0) {
       const contributionRows = await Promise.all(recentContributions.map(async event => {
@@ -1328,7 +1333,9 @@
     }
 
     addEtherscanLinks('scanlink', 'PyramidGame', chainName)
-  })
+  }
+
+  provider.onConnect(renderPage)
 
 
 

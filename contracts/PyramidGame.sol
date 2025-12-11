@@ -46,8 +46,6 @@ contract PyramidGame is ERC20 {
   uint8 constant public SLOTS = 12;
   uint8 constant public INVALID_SLOT = SLOTS + 1;
 
-  uint256 constant public TOKENS_PER_ETH = 100_000;
-
   /// @notice The Leaders contract managing the leader NFTs and contribution balances
   PyramidGameLeaders public leaders;
 
@@ -93,7 +91,7 @@ contract PyramidGame is ERC20 {
 
   /// @notice View a participant's direct and indirect contributions
   function outstandingContributions(address contributor) public view returns (uint256) {
-    return balanceOf(contributor) / TOKENS_PER_ETH;
+    return balanceOf(contributor);
   }
 
 
@@ -117,7 +115,7 @@ contract PyramidGame is ERC20 {
   /// @notice Allows existing leaders to burn $PYRAMID and increment their LEADER token's contribution balance
   function addToLeaderContributionBalance(uint256 tokenId, uint256 tokenAmount) external {
     _burn(msg.sender, tokenAmount);
-    leaders.incrementContributionBalance(tokenId, tokenAmount / TOKENS_PER_ETH);
+    leaders.incrementContributionBalance(tokenId, tokenAmount);
   }
 
 
@@ -197,14 +195,14 @@ contract PyramidGame is ERC20 {
       if (senderContributions > leaderAmount) {
         _replaceLowestLeader(tokenId, contributor, leaderAmount, senderContributions);
       } else {
-        _mint(contributor, contributionAmount * TOKENS_PER_ETH);
+        _mint(contributor, contributionAmount);
       }
     }
   }
 
   /// @dev Find the leader with the lowest total contribution amount and replace them with the sender.
   function _replaceLowestLeader(uint256 tokenId, address contributor, uint256 leaderAmount, uint256 senderContributions) internal {
-    _mint(leaders.ownerOf(tokenId), leaderAmount * TOKENS_PER_ETH);
+    _mint(leaders.ownerOf(tokenId), leaderAmount);
     leaders.reorg(tokenId, contributor, senderContributions - leaderAmount);
     _burn(contributor, balanceOf(contributor));
   }

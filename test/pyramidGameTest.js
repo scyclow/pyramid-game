@@ -191,13 +191,13 @@ describe('PyramidGame', () => {
             contributions[c] < contributions[a] ? c : a
           , 0)
 
-          const totalContributions = val + ((coinBalances[s.address] / 100_000) || 0)
+          const totalContributions = val + ((coinBalances[s.address]) || 0)
 
           // replace lowest leader
           if (totalContributions > contributions[lowestToken]) {
 
             // refund lowest leader in coins
-            coinBalances[tokenOwners[lowestToken]] = contributions[lowestToken] * 100_000
+            coinBalances[tokenOwners[lowestToken]] = contributions[lowestToken]
 
             // update leader coin contributions
             contributions[lowestToken] = totalContributions
@@ -214,7 +214,7 @@ describe('PyramidGame', () => {
 
           // credit sender in coins
           } else {
-            coinBalances[s.address] += val * 100_000
+            coinBalances[s.address] += val
           }
 
         }
@@ -268,7 +268,7 @@ describe('PyramidGame', () => {
 
       const addToLeaderContributionBalance = async (s, tokenId, amount) => {
         coinBalances[s.address] -= amount
-        contributions[tokenId] += amount / 100_000
+        contributions[tokenId] += amount
 
         const r = await PG(s).addToLeaderContributionBalance(tokenId, toETH(amount))
         txs[s.address].push(r)
@@ -306,10 +306,10 @@ describe('PyramidGame', () => {
 
 
 
-      await transferCoin(signers[5], signers[7], 20001)
+      await transferCoin(signers[5], signers[7], 0.20001)
 
       await claimLeadership(signers[7])
-      await addToLeaderContributionBalance(signers[0], 0, 1000)
+      await addToLeaderContributionBalance(signers[0], 0, 0.01)
 
 
 

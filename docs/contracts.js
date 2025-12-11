@@ -22,7 +22,6 @@ export const CONTRACTS = {
       'function allowance(address owner, address spender) public view returns (uint256)',
       'function transferFrom(address from, address to, uint256 amount) public returns (bool)',
       'function totalSupply() public view returns (uint256)',
-      'function TOKENS_PER_ETH() public view returns (uint256)'
     ]
   },
   PyramidGameLeaders: {

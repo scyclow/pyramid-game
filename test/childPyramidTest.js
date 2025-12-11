@@ -129,8 +129,8 @@ describe('PyramidGame Child Deployment', () => {
       const PyramidGameWalletFactory = await ethers.getContractFactory('PyramidGameWallet')
       const childWallet = PyramidGameWalletFactory.attach(childWalletAddr)
 
-      // Step 3: Child wallet should have parent ERC20 (0.75 * 100000 = 75000)
-      const childWalletParentERC20 = ethVal(await PyramidGame.balanceOf(childWalletAddr)) / 100000
+      // Step 3: Child wallet should have parent ERC20 (0.75)
+      const childWalletParentERC20 = ethVal(await PyramidGame.balanceOf(childWalletAddr))
       expect(childWalletParentERC20).to.equal(0.75)
       expect(await parentLeaders.balanceOf(childWalletAddr)).to.equal(0) // No parent NFT yet
 
@@ -145,7 +145,7 @@ describe('PyramidGame Child Deployment', () => {
 
       // Step 5: Child participant contributes 0.5 ETH to parent, gets parent ERC20
       await PG(childParticipant).contribute(txValue(0.5))
-      const childParticipantParentERC20 = ethVal(await PyramidGame.balanceOf(childParticipant.address)) / 100000
+      const childParticipantParentERC20 = ethVal(await PyramidGame.balanceOf(childParticipant.address))
       expect(childParticipantParentERC20).to.equal(0.5)
 
       // Transfer all parent ERC20 to child wallet
@@ -153,7 +153,7 @@ describe('PyramidGame Child Deployment', () => {
       await PyramidGame.connect(childParticipant).transfer(childWalletAddr, tokenAmount)
 
       // Child wallet should now have 0.75 + 0.5 = 1.25 worth of parent ERC20
-      const childWalletTotalERC20 = ethVal(await PyramidGame.balanceOf(childWalletAddr)) / 100000
+      const childWalletTotalERC20 = ethVal(await PyramidGame.balanceOf(childWalletAddr))
       expect(childWalletTotalERC20).to.be.closeTo(1.25, 0.01)
 
       // Step 6: Both child participants sign for child wallet to claim leadership on parent
