@@ -39,6 +39,7 @@
   --accent-color: var(--blue-color);
   --font-color:  var(--black-color);
   --bg-color: var(--green-color);
+  --error-color: var(--red-color);
   --dark-border-color: var(--black-color);
 
   --tertiary-color: #000;

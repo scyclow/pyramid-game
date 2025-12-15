@@ -221,27 +221,27 @@ contract TokenURI {
   }
 
   function rawSVG(uint256 tokenId) public pure returns (string memory) {
-    string memory color0 = '#000';
-    string memory color1 = '#46ff5a';
-    string memory color2 = '#001cff';
-    string memory color3 = '#ff1b1b';
+    string memory black = '#000';
+    string memory green = '#46ff5a';
+    string memory blue = '#001cff';
+    string memory red = '#ff1b1b';
 
     string[2][12] memory colorPairs = [
-      [color0, color1],
-      [color2, color1],
-      [color3, color1],
+      [black, green],
+      [blue, green],
+      [red, green],
 
-      [color2, color0],
-      [color3, color0],
-      [color1, color0],
+      [green, red],
+      [black, red],
+      [blue, red],
 
-      [color3, color2],
-      [color1, color2],
-      [color0, color2],
+      [red, blue],
+      [green, blue],
+      [black, blue],
 
-      [color1, color3],
-      [color0, color3],
-      [color2, color3]
+      [blue, black],
+      [red, black],
+      [green, black]
     ];
 
     uint256 tokenIx = tokenId % 12;
