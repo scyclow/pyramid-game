@@ -181,7 +181,7 @@ contract PyramidGameLeaderboard is ERC721 {
 
   /// @dev Sync recipient and owner on token transfer
   ///      Automatically sets the recipient to the new owner
-  function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual override {
+  function _beforeTokenTransfer(address, address to, uint256 tokenId) internal virtual override {
     leaderData[tokenId].recipient = to;
     leaderData[tokenId].owner = to;
   }

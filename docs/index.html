@@ -148,7 +148,7 @@
       }
     }
 
-    ul {
+    ul, .listLike {
       font-weight: bolder;
       list-style: none;
       padding: 0;
@@ -157,7 +157,7 @@
 
     }
 
-    ul li {
+    ul li, .listLike > div {
       padding: 0.75em 0;
     }
 
@@ -765,7 +765,7 @@
   <!-- 3. Leaderboard -->
   <section id="leaderboard">
     <div class="center-v">
-      <h2 id="leaderboard-title" class="section-title">Leaderboard</h2>
+      <h2 id="leaderboard-title" class="section-title">Leaderboard<sup style="font-size:0.75em"><a href="#docs-leaderboard">?</a></sup></h2>
 
       <connect-wallet>
         <div slot="connected">
@@ -832,7 +832,7 @@
     <div slot="connected">
       <section class="center-v" id="relatedGames">
 
-        <h2 class="section-title">Related Games</h2>
+        <h2 class="section-title">Related Games<sup style="font-size:0.75em"><a href="#docs-childGames">?</a></sup></h2>
         <div style="max-width: 800px; margin: 1em auto;">
           <div id="childGames">
             <div class="fastBlink" style="text-align: center; padding: 2em;">Loading...</div>
@@ -857,10 +857,10 @@
   <section id="docs">
     <h2 class="section-title">Documentation</h2>
 
-    <h3>Summary</h3>
+    <h3 style="margin-top: 1em">Summary</h3>
     <p>All ETH sent to the Pyramid Game contract is split proportionally among the leaders.</p>
 
-    <h3>Contributions</h3>
+    <h3 id="docs-contributions">Contributions</h3>
     <p>The contribution workflow is initiated whenever ETH is sent to the Pyramid Game contract, or an address calls the <code>contribute</code> function. This workflow is split into two phases: distribution and reorg.</p>
 
     <h4 id="docs-distribution">Distribution</h4>
@@ -930,41 +930,40 @@
     -->
 
     <h4>PyramidGame</h4>
-    <p>The main contract combining pyramid scheme distribution logic with ERC-20 token functionality.</p>
+    <p>The main contract that manages the distribution mechanism and $PYRAMID.</p>
 
-    <p><strong>Key Functions:</strong></p>
-    <ul>
-      <li><code>contribute() payable</code> - Main entry point for sending ETH to the game</li>
-      <li><code>claimLeaderboardSlot()</code> - Manually claim a leaderboard position using your $PYRAMID balance</li>
-      <li><code>addToLeaderContributionBalance(tokenId, amount)</code> - Burn $PYRAMID to increase a leader's contribution amount</li>
-      <li><code>deployChildPyramidGame(name, tokenSymbol, leaderSymbol) payable</code> - Create a child Pyramid Game</li>
-      <li><code>balanceOf(address)</code>, <code>transfer(to, amount)</code>, <code>approve(spender, amount)</code> - Standard ERC-20 functions for $PYRAMID</li>
-      <li><code>leaderboard()</code> - Returns the address of the leaderboard contract</li>
-      <li><code>wallet()</code> - Returns the address of the multisig wallet contract</li>
-    </ul>
+    <p style="margin: 1em"><strong>Key Functions:</strong></p>
+    <div class="listLike">
+      <div><code>contribute() payable</code> - Main entry point for sending ETH to the game</div>
+      <div><code>claimLeaderboardSlot()</code> - Manually claim a leaderboard position using your $PYRAMID balance</div>
+      <div><code>addToLeaderContributionBalance(tokenId, amount)</code> - Burn $PYRAMID to increase a leader's contribution amount</div>
+      <div><code>deployChildPyramidGame(name, tokenSymbol, leaderSymbol) payable</code> - Create a child Pyramid Game</div>
+      <div><code>balanceOf(address)</code>, <code>transfer(to, amount)</code>, <code>approve(spender, amount)</code> - Standard ERC-20 functions for $PYRAMID</div>
+      <div><code>leaderboard()</code> - Returns the address of the leaderboard contract</div>
+      <div><code>wallet()</code> - Returns the address of the multisig wallet contract</div>
+    </div>
 
     <h4>PyramidGameLeaderboard</h4>
-    <p>ERC-721 contract managing leaderboard positions with onchain metadata.</p>
+    <p>ERC-721 contract managing leaderboard positions.</p>
 
-    <p><strong>Key Functions:</strong></p>
-    <ul>
-      <li><code>contributions(tokenId)</code> - Returns the contribution amount for a specific leader token</li>
-      <li><code>recipientOf(tokenId)</code> - Returns the distribution recipient address (defaults to token owner)</li>
-      <li><code>setRecipient(tokenId, address)</code> - Set a custom recipient for distributions</li>
-      <li><code>lowestLeader()</code> - Returns the token ID and contribution amount of the lowest leader</li>
-      <li><code>getAllLeaderData()</code> - Batch read all leader data in a single call</li>
-      <li><code>contributionTotal()</code> - Returns the sum of all leader contribution balances</li>
-      <li><code>ownerOf(tokenId)</code>, <code>transferFrom(from, to, tokenId)</code>, <code>approve(to, tokenId)</code> - Standard ERC-721 functions</li>
-    </ul>
+    <p style="margin: 1em"><strong>Key Functions:</strong></p>
+    <div class="listLike">
+      <div><code>contributions(tokenId)</code> - Returns the contribution amount for a specific leader token</div>
+      <div><code>recipientOf(tokenId)</code> - Returns the distribution recipient address (defaults to token owner)</div>
+      <div><code>setRecipient(tokenId, address)</code> - Set a custom recipient for distributions</div>
+      <div><code>lowestLeader()</code> - Returns the token ID and contribution amount of the lowest leader</div>
+      <div><code>getAllLeaderData()</code> - Batch read all leader data in a single call</div>
+      <div><code>contributionTotal()</code> - Returns the sum of all leader contribution balances</div>
+    </div>
 
     <h4>PyramidGameLeaderboardWallet</h4>
     <p>Multisig wallet contract controlled by leaderboard NFT holders.</p>
 
-    <p><strong>Key Functions:</strong></p>
-    <ul>
-      <li><code>executeLeaderTransaction(target, value, data, nonce, tokenIds[], signatures[])</code> - Execute a transaction with majority approval</li>
-      <li><code>nonceUsed(nonce)</code> - Check if a nonce has been used (prevents replay attacks)</li>
-    </ul>
+    <p style="margin: 1em"><strong>Key Functions:</strong></p>
+    <div class="listLike">
+      <div><code>executeLeaderTransaction(target, value, data, nonce, tokenIds[], signatures[])</code> - Execute a transaction with majority approval</div>
+      <div><code>nonceUsed(nonce)</code> - Check if a nonce has been used (prevents replay attacks)</div>
+    </div>
 
     <p><strong>Signature Format:</strong> Leaders sign EIP-191 formatted messages containing <code>keccak256(abi.encode(target, value, data, nonce))</code>. Each signature must correspond to a leader NFT owner or approved operator.</p>
 
@@ -1794,7 +1793,7 @@
       }))
 
       $.id('distributions').innerHTML = `
-        <h2 class="section-title">Latest Contributions</h2>
+        <h2 class="section-title">Latest Contributions<sup style="font-size:0.75em"><a href="#docs-contributions">?</a></sup></h2>
         <div style="max-width: 800px; margin: 1em auto;">
           ${contributionRows.join('')}
         </div>

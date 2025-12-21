@@ -6,7 +6,7 @@ export const CONTRACTS = {
     addr: {
       local: '0xbdEd0D2bf404bdcBa897a74E6657f1f12e5C6fb6',
       sepolia: '0x3b0E151c9be53B6316Ef7E7B7A18FF2713C6D609',
-      base: ''
+      mainnet: '0x54A1E7915770EEDb9f16e88D11Db5f19b05Af6fd'
     },
     abi: [
       'event Contribution(address indexed sender, uint256 amount)',
@@ -37,7 +37,7 @@ export const CONTRACTS = {
     addr: {
       local: '0xdfd861B9bA6E7961b72140AbD74F5411197B981D',
       sepolia: '',
-      base: ''
+      mainnet: '0xD1769D7738d729EE76bbd747823c2ca256d299f9'
     },
     abi: [
       'event MetadataUpdate(uint256 _tokenId)',
@@ -60,9 +60,11 @@ export const CONTRACTS = {
     addr: {
       local: '0xa06B7221053C11A19fbeeE1297aBc83F1BA0d7A3',
       sepolia: '',
-      base: ''
+      mainnet: '0xcc88a0a881561148A8DaC357e385142Bb724057a'
     },
-    abi: []
+    abi: [
+      'function executeLeaderTransaction(address target, uint256 value, bytes calldata data, uint256 txNonce, uint256[] calldata leaderTokenIds, bytes[] calldata signatures) external'
+    ]
   }
 }
 

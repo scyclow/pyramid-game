@@ -43,10 +43,10 @@ export class Web3Provider {
   onConnectCbs = []
   ens = ''
 
-  FORCED_CHAIN_ID = '0x7a69'
+  FORCED_CHAIN_ID = '0x1'
   VALID_CHAINS = [
-    // '0x1', // mainnet
-    '0x7a69', // local
+    '0x1', // mainnet
+    // '0x7a69', // local
     // '0xaa36a7', // sepolia
     // '0x2105', // base
     // '0x14a34', // base sepolia

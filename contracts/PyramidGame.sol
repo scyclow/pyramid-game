@@ -34,7 +34,10 @@ pragma solidity ^0.8.30;
 
 /// @title Pyramid Game
 /// @author steviep.eth
-/// @notice A pyramid scheme game in which all ETH sent to the contract is split proportionally among the top previous senders.
+/// @notice Pyramid Game is a zero-sum wealth redistribution game that uses cutting-edge pyramid scheme technology.
+/// It is not a financial security.
+/// All ETH sent to Pyramid Game is split proportionally among the 12 leaderboard players based on their prior contributions.
+/// Leaderboard positions are represented by NFTs, and contributions from non-leaders are represented by the $PYRAMID token.
 /// Two phases take place when an ETH contribution is made to the Pyramid Game contract: DISTRIBUTION and REORG.
 /// The DISTRIBUTION phase splits the contribution among the Leaders.
 /// This split is proportional, based on how much Leaders have directly or indirectly contributed.
