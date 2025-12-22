@@ -47,6 +47,7 @@ export const CONTRACTS = {
       'function contributionTotal() external view returns (uint256)',
       'function totalSupply() external view returns (uint256)',
       'function lowestLeader() external view returns (uint256 tokenId, uint256 amount)',
+      'function getAllLeaderData() external view returns (tuple(address owner, uint96 contribution, address recipient)[] result, uint256 total)',
       'function setRecipient(uint256 tokenId, address recipient) external',
       'function recipientOf(uint256 tokenId) external view returns (address)',
       'function balanceOf(address owner) external view returns (uint256)',

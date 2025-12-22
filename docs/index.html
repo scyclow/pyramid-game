@@ -496,7 +496,7 @@
 
 
     .section-box {
-      border: 3px solid var(--font-color);
+      border: 6px solid var(--font-color);
       padding: 1.5em;
       margin: 2em auto;
       max-width: 800px;
@@ -748,7 +748,7 @@
         <ul>
           <li>Pyramid Game is a zero-sum wealth redistribution game that uses cutting-edge pyramid scheme technology. It is not a financial security.</li>
           <li>All ETH sent to Pyramid Game is split proportionally among the 12 <a href="#leaderboard" class="a-normal">leaderboard</a> players based on their prior contributions.</li>
-          <li>Leaderboard positions are represented by NFTs, and contributions from non-leaders are represented by the $PYRAMID token.</li>
+          <li>Leaderboard slots are represented by NFTs, and contributions from non-leaders are represented by the $PYRAMID token.</li>
         </ul>
         <a href="#docs" class="a-normal" style="margin-left: 1.5em;">Learn More →</a>
       </div>
@@ -938,7 +938,7 @@
     <p style="margin: 1em"><strong>Key Functions:</strong></p>
     <div class="listLike">
       <div><code>contribute() payable</code> - Main entry point for sending ETH to the game</div>
-      <div><code>claimLeaderboardSlot()</code> - Manually claim a leaderboard position using your $PYRAMID balance</div>
+      <div><code>claimLeaderboardSlot()</code> - Manually claim a leaderboard slot using your $PYRAMID balance</div>
       <div><code>addToLeaderContributionBalance(tokenId, amount)</code> - Burn $PYRAMID to increase a leader's contribution amount</div>
       <div><code>deployChildPyramidGame(name, tokenSymbol, leaderSymbol) payable</code> - Create a child Pyramid Game</div>
       <div><code>balanceOf(address)</code>, <code>transfer(to, amount)</code>, <code>approve(spender, amount)</code> - Standard ERC-20 functions for $PYRAMID</div>
@@ -947,7 +947,7 @@
     </div>
 
     <h4>PyramidGameLeaderboard</h4>
-    <p>ERC-721 contract managing leaderboard positions.</p>
+    <p>ERC-721 contract managing leaderboard slots.</p>
 
     <p style="margin: 1em"><strong>Key Functions:</strong></p>
     <div class="listLike">
@@ -1176,7 +1176,7 @@
     })
   }
 
-  const renderLeaderboard = (sortedLeaders, etherscanLink) => {
+  const renderLeaderboard = (sortedLeaders, etherscanLink, leaderboardAddr) => {
     return sortedLeaders.map(l => {
       const escapedSVG = l.svg.replace(/"/g, '&quot;')
       return `
@@ -1206,7 +1206,7 @@
                   </dd>
                 </dl>
               </div>
-              <strong style="font-size: 0.75em"><a href="https://opensea.io/item/ethereum/0xd1769d7738d729ee76bbd747823c2ca256d299f9/${l.tokenId}" target="_blank" rel="nofollow">View on OpenSea →</a></strong>
+              <strong style="font-size: 0.75em"><a href="https://opensea.io/item/ethereum/${leaderboardAddr}/${l.tokenId}" target="_blank" rel="nofollow">View on OpenSea →</a></strong>
             </div>
           </div>
         </div>
@@ -1286,32 +1286,41 @@
     const { PyramidGame } = await provider.getContracts()
     const { name: chainName, etherscanLink } = await provider.getNetwork()
 
-    const leaderboardAddr = await PyramidGame.leaderboard()
+    const [leaderboardAddr, pyramidSymbol] = await Promise.all([
+      PyramidGame.leaderboard(),
+      PyramidGame.symbol()
+    ])
     const PyramidGameLeaderboard = await provider.contract(leaderboardAddr, CONTRACTS.PyramidGameLeaderboard.abi)
 
-    const activeLeaderse = Number(await PyramidGameLeaderboard.totalSupply())
-    const leaderContributionTotal = ethVal(await PyramidGameLeaderboard.contributionTotal())
+    // Fetch all leader data in a single batch call
+    const [leaderDataArray, leaderContributionTotalRaw] = await PyramidGameLeaderboard.getAllLeaderData()
+    const activeLeaderse = leaderDataArray.length
+    const leaderContributionTotal = ethVal(leaderContributionTotalRaw)
 
-    // Fetch all leader data
-    const leaders = await Promise.all(times(activeLeaderse, async i => {
-      const owner = await PyramidGameLeaderboard.ownerOf(i)
-      const prettyAddrShort = await provider.formatAddr(owner)
-      const prettyAddr = await provider.formatAddr(owner, false)
-      const contribution = ethVal(await PyramidGameLeaderboard.contributions(i))
-      const tokenURI = JSON.parse(utf8Clean(await PyramidGameLeaderboard.tokenURI(i)))
-      const svg = extractSVG(tokenURI)
+    // Fetch remaining data (tokenURI and approvals) for each leader
+    const leaders = await Promise.all(leaderDataArray.map(async (leaderData, i) => {
+      const owner = leaderData.owner
+      const contribution = ethVal(leaderData.contribution)
+      const recipientAddr = leaderData.recipient
+
+      const [prettyAddrShort, prettyAddr, tokenURI, approvedAddr] = await Promise.all([
+        provider.formatAddr(owner),
+        provider.formatAddr(owner, false),
+        PyramidGameLeaderboard.tokenURI(i),
+        PyramidGameLeaderboard.getApproved(i)
+      ])
+
+      const svg = extractSVG(JSON.parse(utf8Clean(tokenURI)))
+      const tokenName = JSON.parse(utf8Clean(tokenURI)).name
       const percentage = (contribution / leaderContributionTotal) * 100
-      const recipientAddr = await PyramidGameLeaderboard.recipientOf(i)
       const recipient = recipientAddr !== ethers.constants.AddressZero ? recipientAddr : null
       const recipientPretty = recipient ? await provider.formatAddr(recipient, false) : null
-
-      const approvedAddr = await PyramidGameLeaderboard.getApproved(i)
       const approved = approvedAddr !== ethers.constants.AddressZero ? approvedAddr : null
       const approvedPretty = approved ? await provider.formatAddr(approved, false) : null
 
       return {
         tokenId: i,
-        tokenName: tokenURI.name,
+        tokenName,
         owner,
         prettyAddr,
         prettyAddrShort,
@@ -1343,7 +1352,7 @@
     `
 
     // Render leaderboard grid
-    $.id('leaderboard-board').innerHTML = renderLeaderboard(sortedLeaders, etherscanLink)
+    $.id('leaderboard-board').innerHTML = renderLeaderboard(sortedLeaders, etherscanLink, leaderboardAddr)
 
     // Get user's tokens
     const userTokens = leaders.filter(l => l.owner.toLowerCase() === addr.toLowerCase())
@@ -1446,9 +1455,20 @@
         ` : ''}
         ${erc20Balance > 0 ? `
           <h3>$PYRAMID Balance: ${erc20Balance.toFixed(4)}</h3>
+          <div class="center" style="margin-top: 0.5em;">
+            <button id="addPyramidToWalletBtn" class="small-button">Add $${pyramidSymbol} to wallet</button>
+          </div>
         ` : ''}
       </div>
     ` : ''
+
+    // Wire up add PYRAMID to wallet button
+    const addPyramidToWalletBtn = $.id('addPyramidToWalletBtn')
+    if (addPyramidToWalletBtn) {
+      addPyramidToWalletBtn.onclick = async () => {
+        await provider.addCoin(PyramidGame.address, pyramidSymbol)
+      }
+    }
 
     // === 5. User Section ===
     let userSectionHTML = ''
@@ -1907,6 +1927,7 @@
 
     // Check if this game has a parent
     let parentGameHTML = ''
+    let isChildGame = false
     try {
       const parentAddr = await PyramidGame.parent()
       if (parentAddr && parentAddr !== ethers.constants.AddressZero) {
@@ -1931,9 +1952,27 @@
             </div>
           </div>
         `
+
+        // This is a child game
+        isChildGame = true
       }
     } catch (e) {
       // Parent function may not exist or may return zero address
+    }
+
+    // Update top game address display if viewing a child game
+    if (isChildGame) {
+      const gameAddress = PyramidGame.address
+      const prettyGameAddr = await provider.formatAddr(gameAddress, true)
+      const topGameTitle = document.querySelector('.scanlink-style')
+      if (topGameTitle) {
+        topGameTitle.innerHTML = `${prettyGameAddr}<svg xmlns="http://www.w3.org/2000/svg" width="0.6em" viewBox="0 0 156 184" fill="none" style="margin-left: 0.25em; margin-top: 0em;">
+          <rect x="6" y="6" width="144" height="172" stroke-width="23"/>
+          <path d="M32 52H124" stroke-width="15"/>
+          <path d="M32 92H124" stroke-width="15"/>
+          <path d="M32 132H124" stroke-width="15"/>
+        </svg>`
+      }
     }
 
     // Render current game's children
