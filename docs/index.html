@@ -786,6 +786,10 @@
             </connect-button>
           </div>
         </div>
+
+        <div slot="noWeb3">
+          <p style="text-align: center; margin: 2em 0;">View this page with a web3-enabled browser to view the leaderboard</p>
+        </div>
       </connect-wallet>
     </div>
   </section>
@@ -1855,10 +1859,10 @@
 
     // Fetch and render contribution events
     const contributionEvents = await provider.contractEvents(PyramidGame, 'Contribution', [])
-    const recentContributions = contributionEvents.slice(-20).reverse() // Last 20, most recent first
+    const allContributions = contributionEvents.slice().reverse() // All contributions, most recent first
 
-    if (recentContributions.length > 0) {
-      const contributionRows = await Promise.all(recentContributions.map(async event => {
+    if (allContributions.length > 0) {
+      const contributionRows = await Promise.all(allContributions.map(async event => {
         const prettySender = await provider.formatAddr(event.sender)
         const amount = ethVal(event.amount)
         const block = await provider.provider.getBlock(event.blockNumber)
@@ -1871,14 +1875,16 @@
       }))
 
       $.id('distributions').innerHTML = `
-        <h2 class="section-title">Latest Contributions<sup style="font-size:0.75em"><a href="#docs-contributions">?</a></sup></h2>
+        <h2 class="section-title">Contributions<sup style="font-size:0.75em"><a href="#docs-contributions">?</a></sup></h2>
+        <h4 style="text-align: center; margin-top: 0.5em;">Total Contributions: <strong>${contributionEvents.length}</strong></h4>
         <div style="max-width: 800px; margin: 1em auto;">
           ${contributionRows.join('')}
         </div>
       `
     } else {
       $.id('distributions').innerHTML = `
-        <h2 class="section-title">Latest Contributions</h2>
+        <h2 class="section-title">Contributions</h2>
+        <h4 style="text-align: center; margin-top: 0.5em;">Total Contributions: <strong>0</strong></h4>
         <p>No contributions yet</p>
       `
     }
