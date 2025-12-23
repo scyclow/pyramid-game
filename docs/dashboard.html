@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <title>Pyramid Game - Dashboard</title>
+  <link rel='shortcut icon' type='image/x-icon' href='./logo.svg' id='favicon'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+
+  <meta name='description' content='Pyramid Game player dashboard - view all players, balances, and distributions.'>
+
+  <link rel='stylesheet' type='text/css' href='./styles.css'>
+
+  <style type='text/css'>
+    body {
+      padding: 2em;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 3em;
+      margin-bottom: 0.5em;
+    }
+
+    .dashboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2em 0;
+      font-size: 0.9em;
+    }
+
+    .dashboard-table th {
+      background: var(--accent-color);
+      color: var(--bg-color);
+      padding: 1em;
+      text-align: right;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      font-size: 0.75em;
+
+    }
+
+    .dashboard-table th:first-child {
+      text-align: left;
+    }
+
+    .dashboard-table th:hover {
+      background: var(--font-color);
+    }
+
+    .dashboard-table th::after {
+      content: ' ↕';
+      opacity: 0.5;
+    }
+
+    .dashboard-table th.sorted-asc::after {
+      content: ' ↑';
+      opacity: 1;
+    }
+
+    .dashboard-table th.sorted-desc::after {
+      content: ' ↓';
+      opacity: 1;
+    }
+
+    .dashboard-table td {
+      padding: 0.5em 0.75em;
+      border-bottom: 1px solid var(--font-color);
+      text-align: right;
+    }
+
+    .dashboard-table td:first-child {
+      text-align: left;
+    }
+
+    .dashboard-table tr:hover {
+      background: var(--gray-color);
+    }
+
+    .address-col {
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+
+    .dashboard-table a {
+      color: var(--font-color);
+    }
+
+    .leader-badge {
+      background: var(--accent-color);
+      color: var(--bg-color);
+      padding: 0.25em 0.5em;
+      border-radius: 0.25em;
+      font-size: 0.8em;
+      font-weight: 600;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3em;
+      font-size: 1.5em;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1em;
+      text-decoration: underline;
+    }
+
+    .stats-bar {
+      display: flex;
+      justify-content: space-around;
+      gap: 2em;
+      margin: 2em 0;
+      padding: 1.5em;
+      background: var(--gray-color);
+      border: 2px solid var(--font-color);
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2em;
+      font-weight: 600;
+    }
+
+    .stat-label {
+      font-size: 0.9em;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+
+<a href='./index.html' class='back-link'>← Back to Pyramid Game</a>
+
+<h1>Player Dashboard</h1>
+
+<connect-wallet>
+  <div slot='connected'>
+    <div id='stats' class='stats-bar' style='display: none;'></div>
+    <div id='dashboard-content' class='loading' style="padding: 0;">Loading dashboard...</div>
+  </div>
+</connect-wallet>
+
+<script src='./min.ethers.js' type='application/javascript'></script>
+<script src="./utils.js"></script>
+
+
+<script type='module'>
+  import {provider, etherscanAddr, addEtherscanLinks, ethVal, txValue} from './eth.js'
+  import {CONTRACTS} from './contracts.js'
+  import {$, queryParams} from './$.js'
+  import {simulateDistributions} from './distributionSimulator.js'
+
+  const ROOT_GAME_ADDRESSES = {
+    local: CONTRACTS.PyramidGame.addr.local,
+    sepolia: CONTRACTS.PyramidGame.addr.sepolia,
+    mainnet: CONTRACTS.PyramidGame.addr.mainnet,
+    base: CONTRACTS.PyramidGame.addr.base
+  }
+
+  async function loadCustomGame() {
+    const customGameAddress = queryParams.address
+
+    if (!customGameAddress || !ethers.utils.isAddress(customGameAddress)) {
+      return
+    }
+
+    const { name: networkKey } = await provider.getNetwork()
+    const rootGameAddr = ROOT_GAME_ADDRESSES[networkKey]
+
+    if (customGameAddress.toLowerCase() !== rootGameAddr?.toLowerCase()) {
+      CONTRACTS.PyramidGame.addr[networkKey] = customGameAddress
+    }
+  }
+
+  provider.setContractInfo(CONTRACTS)
+  addEtherscanLinks('scanlink', 'PyramidGame')
+
+  async function renderDashboard() {
+    const { PyramidGame } = await provider.getContracts()
+    const { name: chainName, etherscanLink } = await provider.getNetwork()
+
+    const leaderboardAddr = await PyramidGame.leaderboard()
+    const PyramidGameLeaderboard = await provider.contract(leaderboardAddr, CONTRACTS.PyramidGameLeaderboard.abi)
+
+    // Fetch all events
+    const contributionEvents = await provider.contractEvents(PyramidGame, 'Contribution', [])
+    const nftTransferEvents = await provider.contractEvents(PyramidGameLeaderboard, 'Transfer', [])
+    const erc20TransferEvents = await provider.contractEvents(PyramidGame, 'Transfer', [])
+
+    // Get parent address for simulation
+    let parentAddress = null
+    try {
+      parentAddress = await PyramidGame.parent()
+    } catch (e) {}
+
+    const activeLeaders = Number(await PyramidGameLeaderboard.totalSupply())
+
+    // Fetch leader contribution data
+    const [leaderDataArray, leaderContributionTotalRaw] = await PyramidGameLeaderboard.getAllLeaderData()
+    const leaderContributionTotal = ethVal(leaderContributionTotalRaw)
+
+    // Map tokenId to contribution
+    const tokenContributions = {}
+    leaderDataArray.forEach((data, tokenId) => {
+      tokenContributions[tokenId] = ethVal(data.contribution)
+    })
+
+    // Simulate distributions
+    const { sentTotals, receivedTotals } = simulateDistributions(
+      contributionEvents,
+      nftTransferEvents,
+      activeLeaders,
+      parentAddress
+    )
+
+    // Track current $PYRAMID balances through ERC20 transfers
+    const pyramidBalances = {}
+    for (const event of erc20TransferEvents) {
+      const from = event.from.toLowerCase()
+      const to = event.to.toLowerCase()
+      const amount = ethVal(event.value)
+
+      if (from !== ethers.constants.AddressZero.toLowerCase()) {
+        pyramidBalances[from] = (pyramidBalances[from] || 0) - amount
+      }
+      if (to !== ethers.constants.AddressZero.toLowerCase()) {
+        pyramidBalances[to] = (pyramidBalances[to] || 0) + amount
+      }
+    }
+
+    // Track current NFT ownership
+    const nftOwners = {}
+    for (const event of nftTransferEvents) {
+      const tokenId = Number(event.tokenId)
+      const to = event.to.toLowerCase()
+      nftOwners[to] = nftOwners[to] || []
+
+      // Remove from previous owner
+      const from = event.from.toLowerCase()
+      if (nftOwners[from]) {
+        nftOwners[from] = nftOwners[from].filter(id => id !== tokenId)
+      }
+
+      // Add to new owner
+      if (!nftOwners[to].includes(tokenId)) {
+        nftOwners[to].push(tokenId)
+      }
+    }
+
+    // Collect all unique addresses
+    const allAddresses = new Set()
+    Object.keys(sentTotals).forEach(addr => allAddresses.add(addr.toLowerCase()))
+    Object.keys(receivedTotals).forEach(addr => allAddresses.add(addr.toLowerCase()))
+    Object.keys(pyramidBalances).forEach(addr => allAddresses.add(addr.toLowerCase()))
+    Object.keys(nftOwners).forEach(addr => allAddresses.add(addr.toLowerCase()))
+
+    // Build participant data
+    const participants = await Promise.all(
+      Array.from(allAddresses).map(async addr => {
+        const sent = sentTotals[addr] || 0
+        const received = receivedTotals[addr] || 0
+        const pyramid = pyramidBalances[addr] || 0
+        const leaderSlots = (nftOwners[addr] || []).sort((a, b) => a - b)
+        const prettyAddr = await provider.formatAddr(addr, false)
+        const prettyAddrShort = await provider.formatAddr(addr, true)
+
+        // Calculate cumulative payout percentage
+        const totalContribution = leaderSlots.reduce((sum, tokenId) => {
+          return sum + (tokenContributions[tokenId] || 0)
+        }, 0)
+        const payoutPercentage = leaderContributionTotal > 0
+          ? (totalContribution / leaderContributionTotal) * 100
+          : 0
+
+        return {
+          address: addr,
+          prettyAddress: prettyAddr,
+          prettyAddressShort: prettyAddrShort,
+          sent,
+          received,
+          pyramid,
+          leaderSlots,
+          payoutPercentage,
+          isLeader: leaderSlots.length > 0,
+          netGain: received - sent
+        }
+      })
+    )
+
+    // Stats
+    const totalParticipants = participants.length
+    const totalLeaders = participants.filter(p => p.isLeader).length
+    const totalSent = participants.reduce((sum, p) => sum + p.sent, 0)
+
+    $.id('stats').innerHTML = `
+      <div class='stat'>
+        <div class='stat-value'>${totalParticipants}</div>
+        <div class='stat-label'>Total Players</div>
+      </div>
+      <div class='stat'>
+        <div class='stat-value'>${totalLeaders}</div>
+        <div class='stat-label'>Active Leaders</div>
+      </div>
+      <div class='stat'>
+        <div class='stat-value'>Ξ ${totalSent.toFixed(4)}</div>
+        <div class='stat-label'>Total Sent</div>
+      </div>
+    `
+    $.id('stats').style.display = 'flex'
+
+    // Render table
+    renderTable(participants, etherscanLink, chainName)
+  }
+
+  let currentSort = { column: 'sent', direction: 'desc' }
+
+  function renderTable(participants, etherscanLink, chainName) {
+    const sortedParticipants = [...participants].sort((a, b) => {
+      const { column, direction } = currentSort
+      let aVal = a[column]
+      let bVal = b[column]
+
+      // Special handling for leader slots - sort by payout percentage
+      if (column === 'leaderSlots') {
+        aVal = a.payoutPercentage
+        bVal = b.payoutPercentage
+      }
+
+      if (typeof aVal === 'string') {
+        return direction === 'asc'
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal)
+      }
+
+      return direction === 'asc' ? aVal - bVal : bVal - aVal
+    })
+
+    const rows = sortedParticipants.map(p => `
+      <tr>
+        <td class='address-col'>${etherscanAddr(etherscanLink, p.address, p.prettyAddressShort)}</td>
+        <td>${p.sent.toFixed(4)} Ξ</td>
+        <td>${p.received.toFixed(4)} Ξ</td>
+        <td style='color: ${p.netGain >= 0 ? 'var(--accent-color)' : 'var(--red-color)'}'>
+          ${p.netGain.toFixed(4)} Ξ
+        </td>
+        <td>${p.pyramid > 0.0001 ? p.pyramid.toFixed(4) : '—'}</td>
+        <td>
+          ${p.isLeader ? `<span class='leader-badge'>${p.leaderSlots.join(', ')}</span> (${p.payoutPercentage.toFixed(2)}%)` : '—'}
+        </td>
+      </tr>
+    `).join('')
+
+    $.id('dashboard-content').innerHTML = `
+      <table class='dashboard-table'>
+        <thead>
+          <tr>
+            <th data-column='prettyAddress' class='${currentSort.column === 'prettyAddress' ? 'sorted-' + currentSort.direction : ''}'>Address</th>
+            <th data-column='sent' class='${currentSort.column === 'sent' ? 'sorted-' + currentSort.direction : ''}'>Total Sent</th>
+            <th data-column='received' class='${currentSort.column === 'received' ? 'sorted-' + currentSort.direction : ''}'>Total Received</th>
+            <th data-column='netGain' class='${currentSort.column === 'netGain' ? 'sorted-' + currentSort.direction : ''}'>Net Gain</th>
+            <th data-column='pyramid' class='${currentSort.column === 'pyramid' ? 'sorted-' + currentSort.direction : ''}'>$PYRAMID Balance</th>
+            <th data-column='leaderSlots' class='${currentSort.column === 'leaderSlots' ? 'sorted-' + currentSort.direction : ''}'>Leader Slots</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    `
+
+    // Add click handlers for sorting
+    document.querySelectorAll('.dashboard-table th[data-column]').forEach(th => {
+      th.onclick = () => {
+        const column = th.dataset.column
+        if (currentSort.column === column) {
+          currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc'
+        } else {
+          currentSort.column = column
+          currentSort.direction = 'desc'
+        }
+        renderTable(participants, etherscanLink, chainName)
+      }
+    })
+
+    addEtherscanLinks('scanlink', 'PyramidGame', chainName)
+  }
+
+  provider.onConnect(async () => {
+    await loadCustomGame()
+    await renderDashboard()
+  })
+</script>
+
+</body>
+</html>

@@ -9,6 +9,7 @@ export const CONTRACTS = {
       mainnet: '0x54A1E7915770EEDb9f16e88D11Db5f19b05Af6fd'
     },
     abi: [
+      'event Transfer(address indexed from, address indexed to, uint256 value)',
       'event Contribution(address indexed sender, uint256 amount)',
       'event Distribution(address indexed recipient, uint256 amount)',
       'event ChildPyramidDeployed(address indexed childAddress, address indexed deployer, uint256 amount)',
