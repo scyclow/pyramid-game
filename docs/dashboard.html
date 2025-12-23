@@ -142,6 +142,17 @@
       font-size: 0.9em;
       opacity: 0.8;
     }
+
+    .center-v {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    .slowBlink {
+      animation: Blink 3s steps(2, start) infinite;
+    }
   </style>
 </head>
 <body>
@@ -151,14 +162,23 @@
 <h1>Player Dashboard</h1>
 
 <connect-wallet>
+  <div slot='notConnected' class='center-v' style='margin: 2em auto;'>
+    <connect-button>
+      <button slot='button' style='font-size: 1.5em;'>Connect Wallet</button>
+      <div slot='loading' class='slowBlink' style='font-size: 1.5em'>Connecting...</div>
+    </connect-button>
+  </div>
+
   <div slot='connected'>
     <div id='stats' class='stats-bar' style='display: none;'></div>
     <div id='dashboard-content' class='loading' style="padding: 0;">Loading dashboard...</div>
   </div>
 </connect-wallet>
 
-<script src='./min.ethers.js' type='application/javascript'></script>
+
 <script src="./utils.js"></script>
+<script type="module" src="./connectWallet.js"></script>
+
 
 
 <script type='module'>
@@ -240,6 +260,9 @@
     } catch (e) {}
 
     const activeLeaders = Number(await PyramidGameLeaderboard.totalSupply())
+
+    // Fetch symbol
+    const pyramidSymbol = await PyramidGame.symbol()
 
     // Fetch leader contribution data
     const [leaderDataArray, leaderContributionTotalRaw] = await PyramidGameLeaderboard.getAllLeaderData()
@@ -376,12 +399,12 @@
     }
 
     // Render table
-    renderTable(participants, etherscanLink, chainName, latestContributionHTML)
+    renderTable(participants, etherscanLink, chainName, latestContributionHTML, pyramidSymbol)
   }
 
   let currentSort = { column: 'sent', direction: 'desc' }
 
-  function renderTable(participants, etherscanLink, chainName, latestContributionHTML = '') {
+  function renderTable(participants, etherscanLink, chainName, latestContributionHTML = '', pyramidSymbol = 'PYRAMID') {
     const sortedParticipants = [...participants].sort((a, b) => {
       const { column, direction } = currentSort
       let aVal = a[column]
@@ -426,7 +449,7 @@
             <th data-column='sent' class='${currentSort.column === 'sent' ? 'sorted-' + currentSort.direction : ''}'>Total Sent</th>
             <th data-column='received' class='${currentSort.column === 'received' ? 'sorted-' + currentSort.direction : ''}'>Total Received</th>
             <th data-column='netGain' class='${currentSort.column === 'netGain' ? 'sorted-' + currentSort.direction : ''}'>Net Gain</th>
-            <th data-column='pyramid' class='${currentSort.column === 'pyramid' ? 'sorted-' + currentSort.direction : ''}'>$PYRAMID Balance</th>
+            <th data-column='pyramid' class='${currentSort.column === 'pyramid' ? 'sorted-' + currentSort.direction : ''}'>$${pyramidSymbol} Balance</th>
             <th data-column='leaderSlots' class='${currentSort.column === 'leaderSlots' ? 'sorted-' + currentSort.direction : ''}'>Leader Slots</th>
           </tr>
         </thead>
@@ -446,7 +469,7 @@
           currentSort.column = column
           currentSort.direction = 'desc'
         }
-        renderTable(participants, etherscanLink, chainName, latestContributionHTML)
+        renderTable(participants, etherscanLink, chainName, latestContributionHTML, pyramidSymbol)
       }
     })
 

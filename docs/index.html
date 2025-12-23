@@ -748,7 +748,7 @@
         <ul>
           <li>Pyramid Game is a zero-sum wealth redistribution game that uses cutting-edge pyramid scheme technology. It is not a financial security.</li>
           <li>All ETH sent to Pyramid Game is split proportionally among the 12 <a href="#leaderboard" class="a-normal">leaderboard</a> players based on their prior contributions.</li>
-          <li>Leaderboard slots are represented by NFTs, and contributions from non-leaders are represented by the $PYRAMID token.</li>
+          <li>Leaderboard slots are represented by NFTs, and contributions from non-leaders are represented by the <span class="pyramid-symbol">$PYRAMID</span> token.</li>
         </ul>
         <a href="#docs" class="a-normal" style="margin-left: 1.5em;">Learn More →</a>
       </div>
@@ -847,6 +847,18 @@
 
           <div style="max-width: 600px; margin: 2em auto 0; border: 2px solid; padding: 1.5em; padding-top: 0.5em;">
             <div style="margin-top: 1em; text-align: center">
+              <label style="display: block; margin-bottom: 0.25em;">Game Name:</label>
+              <input id="createChildNameInput" placeholder="Game Name" type="text" style="width: 15em">
+            </div>
+            <div style="margin-top: 1em; text-align: center">
+              <label style="display: block; margin-bottom: 0.25em;">Token Symbol:</label>
+              <input id="createChildTokenSymbolInput" placeholder="TOKEN" type="text" style="width: 15em">
+            </div>
+            <div style="margin-top: 1em; text-align: center">
+              <label style="display: block; margin-bottom: 0.25em;">Leader Symbol:</label>
+              <input id="createChildLeaderSymbolInput" placeholder="LEADER" type="text" style="width: 15em">
+            </div>
+            <div style="margin-top: 1em; text-align: center">
               <label style="display: block; margin-bottom: 0.25em;">Initial Contribution:</label>
               <input id="createChildInput" placeholder="0.01 Ξ" type="number" step="0.01" style="width: 10.1em">
             </div>
@@ -885,7 +897,7 @@
     -->
 
     <h4 id="docs-reorg">Reorg</h4>
-    <p>Following the distribution phase, there is a reorg phase in which the original sender's contribution is accounted for. If their contribution is high enough, this will <a href="#docs-leaderboard">enter them onto the leaderboard</a>. Otherwise, the sender will <a href="#docs-pyramid">receive $PYRAMID as a placeholder</a>.</p>
+    <p>Following the distribution phase, there is a reorg phase in which the original sender's contribution is accounted for. If their contribution is high enough, this will <a href="#docs-leaderboard">enter them onto the leaderboard</a>. Otherwise, the sender will <a href="#docs-pyramid">receive <span class="pyramid-symbol">$PYRAMID</span> as a placeholder</a>.</p>
 
     <!-- TODO: Add table or diagram showing before/after leaderboard state
          Show how a new contribution triggers reorg and potentially replaces lowest leader
@@ -905,23 +917,23 @@
     <h4 id="docs-recipient">Recipient</h4>
     <p>Owners (or approved operators) of Pyramid Game leaderboard tokens may opt to forward all distributions to another address. The recipient address is reset on token transfer. Recursive payments back to the Pyramid Game contract are disallowed.</p>
 
-    <h3 id="docs-pyramid">$PYRAMID</h3>
-    <p>$PYRAMID is an ERC-20 token that acts as a placeholder for all contributions made to Pyramid Game. Players will receive $PYRAMID in two circumstances: (a) if their leaderboard token is transferred to another player during a <a href="#docs-reorg">reorg</a>, they will receive an amount of $PYRAMID equal to their contribution balance; and (b) if a non-leader makes a contribution that does not bring them into the leaderboard, they will receive an amount of $PYRAMID equal to the amount of ETH they sent.</p>
+    <h3 id="docs-pyramid"><span class="pyramid-symbol">$PYRAMID</span></h3>
+    <p><span class="pyramid-symbol">$PYRAMID</span> is an ERC-20 token that acts as a placeholder for all contributions made to Pyramid Game. Players will receive <span class="pyramid-symbol">$PYRAMID</span> in two circumstances: (a) if their leaderboard token is transferred to another player during a <a href="#docs-reorg">reorg</a>, they will receive an amount of <span class="pyramid-symbol">$PYRAMID</span> equal to their contribution balance; and (b) if a non-leader makes a contribution that does not bring them into the leaderboard, they will receive an amount of <span class="pyramid-symbol">$PYRAMID</span> equal to the amount of ETH they sent.</p>
 
-    <p>If a player makes a contribution, and the sum of their contribution amount and current $PYRAMID balance is greater than the lowest leader's contribution amount, then that player will receive the leaderboard token and their outstanding $PYRAMID balance will be burned.</p>
+    <p>If a player makes a contribution, and the sum of their contribution amount and current <span class="pyramid-symbol">$PYRAMID</span> balance is greater than the lowest leader's contribution amount, then that player will receive the leaderboard token and their outstanding <span class="pyramid-symbol">$PYRAMID</span> balance will be burned.</p>
 
-    <p>If a player accrues enough $PYRAMID to enter the leaderboard through the secondary market, they can trigger a manual reorg by calling <code>claimLeaderboardSlot</code>.</p>
+    <p>If a player accrues enough <span class="pyramid-symbol">$PYRAMID</span> to enter the leaderboard through the secondary market, they can trigger a manual reorg by calling <code>claimLeaderboardSlot</code>.</p>
 
     <!-- TODO: Add visual diagram showing $PYRAMID mint/burn mechanics -->
 
-    <p id="docs-contributionBalance">$PYRAMID may also be used to directly increase the contribution amount of a leaderboard token by calling <code>addToLeaderContributionBalance</code>.</p>
+    <p id="docs-contributionBalance"><span class="pyramid-symbol">$PYRAMID</span> may also be used to directly increase the contribution amount of a leaderboard token by calling <code>addToLeaderContributionBalance</code>.</p>
 
     <h3 id="docs-childGames">Child Pyramid Games</h3>
-    <p>At any point, a player may create a child Pyramid Game based on a parent game. When creating a new child game, the player must make an initial contribution, which will enter that player into the first slot on the child game's leaderboard. The initial contribution will go towards the parent game. All assets related to the parent game (i.e., leaderboard tokens and $PYRAMID) will go to the child game's <a href="#docs-wallet">leaderboard wallet</a>. As a result, child Pyramid Games may be an effective way to coordinate participation in parent games.</p>
+    <p>At any point, a player may create a child Pyramid Game based on a parent game. When creating a new child game, the player must make an initial contribution, which will enter that player into the first slot on the child game's leaderboard. The initial contribution will go towards the parent game. All assets related to the parent game (i.e., leaderboard tokens and <span class="pyramid-symbol">$PYRAMID</span>) will go to the child game's <a href="#docs-wallet">leaderboard wallet</a>. As a result, child Pyramid Games may be an effective way to coordinate participation in parent games.</p>
 
 
     <h4 id="docs-wallet">Leaderboard Wallet</h4>
-    <p>The leaderboard wallet is a multisig that requires a simple majority of votes from all leaders to execute any action. This may involve transferring assets (leaderboard tokens or $PYRAMID), distributing accrued ETH from parent Pyramid Games, updating the metadata of the leaderboard tokens, or upgrading to a new wallet contract.</p>
+    <p>The leaderboard wallet is a multisig that requires a simple majority of votes from all leaders to execute any action. This may involve transferring assets (leaderboard tokens or <span class="pyramid-symbol">$PYRAMID</span>), distributing accrued ETH from parent Pyramid Games, updating the metadata of the leaderboard tokens, or upgrading to a new wallet contract.</p>
 
     <p>To execute a transaction, more than 50% of leaders must sign off-chain messages approving the action. Each signature verifies that the leader (or their approved operator) controls their leaderboard NFT. Once sufficient signatures are collected, anyone can submit the transaction on-chain via <code>executeLeaderTransaction</code>.</p>
 
@@ -937,15 +949,15 @@
     -->
 
     <h4>PyramidGame</h4>
-    <p>The main contract that manages the distribution mechanism and $PYRAMID.</p>
+    <p>The main contract that manages the distribution mechanism and <span class="pyramid-symbol">$PYRAMID</span>.</p>
 
     <p style="margin: 1em"><strong>Key Functions:</strong></p>
     <div class="listLike">
       <div><code>contribute() payable</code> - Main entry point for sending ETH to the game</div>
-      <div><code>claimLeaderboardSlot()</code> - Manually claim a leaderboard slot using your $PYRAMID balance</div>
-      <div><code>addToLeaderContributionBalance(tokenId, amount)</code> - Burn $PYRAMID to increase a leader's contribution amount</div>
+      <div><code>claimLeaderboardSlot()</code> - Manually claim a leaderboard slot using your <span class="pyramid-symbol">$PYRAMID</span> balance</div>
+      <div><code>addToLeaderContributionBalance(tokenId, amount)</code> - Burn <span class="pyramid-symbol">$PYRAMID</span> to increase a leader's contribution amount</div>
       <div><code>deployChildPyramidGame(name, tokenSymbol, leaderSymbol) payable</code> - Create a child Pyramid Game</div>
-      <div><code>balanceOf(address)</code>, <code>transfer(to, amount)</code>, <code>approve(spender, amount)</code> - Standard ERC-20 functions for $PYRAMID</div>
+      <div><code>balanceOf(address)</code>, <code>transfer(to, amount)</code>, <code>approve(spender, amount)</code> - Standard ERC-20 functions for <span class="pyramid-symbol">$PYRAMID</span></div>
       <div><code>leaderboard()</code> - Returns the address of the leaderboard contract</div>
       <div><code>wallet()</code> - Returns the address of the multisig wallet contract</div>
     </div>
@@ -1250,10 +1262,10 @@
       if (newErc20Balance > lowestLeader.contribution) {
         const newPercentage = (amount / (leaderContributionTotal + amount)) * 100
         message = `<p style="text-align: center"><strong>This transaction would give you a Leaderboard slot.</strong></p>
-                  ${erc20Balance ? `<p style="text-align: center">(Your balance of <strong>${erc20Balance.toFixed(4)} $PYRAMID</strong> will burned)</p>` : ''}
+                  ${erc20Balance ? `<p style="text-align: center">(Your balance of <strong>${erc20Balance.toFixed(4)} $${pyramidSymbol}</strong> will burned)</p>` : ''}
                    <p style="text-align: center">You would receive <strong>${newPercentage.toFixed(2)}%</strong> of future payouts.</p>`
       } else {
-        message = `<p style="text-align: center">This is not enough to enter the Leaderboard. You would need to send at least <strong><span style="margin-right: 0.25em">Ξ</span>${(lowestLeader.contribution + 0.0001 - erc20Balance).toFixed(4)}</strong>.</p> <p style="text-align: center">However, you would receive <strong>${amount.toFixed(4)} $PYRAMID</strong> from this transaction.</p>`
+        message = `<p style="text-align: center">This is not enough to enter the Leaderboard. You would need to send at least <strong><span style="margin-right: 0.25em">Ξ</span>${(lowestLeader.contribution + 0.0001 - erc20Balance).toFixed(4)}</strong>.</p> <p style="text-align: center">However, you would receive <strong>${amount.toFixed(4)} $${pyramidSymbol}</strong> from this transaction.</p>`
       }
     }
 
@@ -1296,6 +1308,13 @@
       PyramidGame.symbol()
     ])
     const PyramidGameLeaderboard = await provider.contract(leaderboardAddr, CONTRACTS.PyramidGameLeaderboard.abi)
+
+    // Update all hardcoded $PYRAMID references if this is a child game with different symbol
+    if (pyramidSymbol !== 'PYRAMID') {
+      document.querySelectorAll('.pyramid-symbol').forEach(el => {
+        el.textContent = `$${pyramidSymbol}`
+      })
+    }
 
     // Fetch all leader data in a single batch call
     const [leaderDataArray, leaderContributionTotalRaw] = await PyramidGameLeaderboard.getAllLeaderData()
@@ -1393,7 +1412,7 @@
         <h3><strong>Connected as:</strong> ${prettyAddr}</h3>
 
         <div class="invert" style="padding: 0.5em">
-          ${erc20Balance > 0 ? `<p>Your $PYRAMID Balance: <strong>${erc20Balance.toFixed(4)}</strong></p>` : ''}
+          ${erc20Balance > 0 ? `<p>Your $${pyramidSymbol} Balance: <strong>${erc20Balance.toFixed(4)}</strong></p>` : ''}
           ${!userIsLeader ? `<p>Lowest Leaderboard contribution: <strong><span style="margin-right: 0.25em">Ξ</span>${lowestLeader.contribution.toFixed(4)}</strong></p>` : ''}
           ${userIsLeader ? `<p>Your Leaderboard Slot${userTokens.length > 1 ? 's' : ''}: <strong>${userTokens.map(l => l.tokenId + ` (${l.percentage.toFixed(2)}%)`).join(', ')}</strong></p>` : ''}
         </div>
@@ -1479,7 +1498,7 @@
           <h3>Your Payout: ${((userTokens.reduce((sum, t) => sum + t.contribution, 0) / leaderContributionTotal) * 100).toFixed(2)}%</h3>
         ` : ''}
         ${erc20Balance > 0 ? `
-          <h3>$PYRAMID Balance: ${erc20Balance.toFixed(4)}</h3>
+          <h3>$${pyramidSymbol} Balance: ${erc20Balance.toFixed(4)}</h3>
           <div class="center" style="margin-top: 0.5em;">
             <button id="addPyramidToWalletBtn" class="small-button">Add $${pyramidSymbol} to wallet</button>
           </div>
@@ -1506,7 +1525,7 @@
         if (canClaimLeaderboardSlot) {
           userSectionHTML += `
             <div class="section-box center-v">
-              <p>Your $PYRAMID balance is high enough to get on the Leaderboard</p>
+              <p>Your $${pyramidSymbol} balance is high enough to get on the Leaderboard</p>
               <button id="claimLeadershipBtn" class="tiny-button">Claim Leaderboard Slot</button>
               <div id="claimError" class="error-message"></div>
             </div>
@@ -1559,9 +1578,9 @@
 
             ${erc20Balance > 0 ? `
               <div style="margin-top: 2em;">
-                <h4 style="margin-top: 1em; text-align: center">Add $PYRAMID to slot contribution balance<sup><a href="#docs-contributionBalance">?</a></sup></h4>
+                <h4 style="margin-top: 1em; text-align: center">Add $${pyramidSymbol} to slot contribution balance<sup><a href="#docs-contributionBalance">?</a></sup></h4>
                 <div class="center form-input" style="margin-top: 0.25em">
-                  <input id="addContribAmount${t.tokenId}" class="tiny-input" placeholder="${erc20Balance.toFixed(2)} $PYRAMID">
+                  <input id="addContribAmount${t.tokenId}" class="tiny-input" placeholder="${erc20Balance.toFixed(2)} $${pyramidSymbol}">
                   <button id="addContribBtn${t.tokenId}" class="small-button">Add</button>
                   <div id="addContribMessage${t.tokenId}" style="margin-top: 0.5em; text-align: center;"></div>
                   <div id="addContribError${t.tokenId}" class="error-message"></div>
@@ -1729,7 +1748,7 @@
                 if (!amount || amount <= 0) {
                   messageEl.innerHTML = ''
                 } else {
-                  messageEl.innerHTML = `This will burn <strong>${amount.toFixed(4)} $PYRAMID</strong> and increase your Leaderboard slot's contribution balance by <strong><span style="margin-right: 0.25em">Ξ</span>${amount.toFixed(4)}</strong>`
+                  messageEl.innerHTML = `This will burn <strong>${amount.toFixed(4)} $${pyramidSymbol}</strong> and increase your Leaderboard slot's contribution balance by <strong><span style="margin-right: 0.25em">Ξ</span>${amount.toFixed(4)}</strong>`
                 }
               }
             }
@@ -2019,8 +2038,6 @@
       `
     }
 
-    console.log(totalChildren, parentGameHTML)
-
     if (totalChildren > 0 || parentGameHTML) {
       $.id('childGames').innerHTML = parentGameHTML + childrenHTML
 
@@ -2032,40 +2049,56 @@
       $.id('childGames').innerHTML = ''
     }
 
+    // Auto-fill child game name/symbol inputs
+    const autoFillChildInputs = async () => {
+      const parentName = await PyramidGame.name()
+      const parentSymbol = await PyramidGame.symbol()
+      const parentLeaderboard = await PyramidGame.leaderboard()
+      const leaderboardContract = await provider.contract(parentLeaderboard, CONTRACTS.PyramidGameLeaderboard.abi)
+      const parentLeaderSymbol = await leaderboardContract.symbol()
+
+      const childIndex = Number(await PyramidGame.totalChildren()) + 1
+      const childNumber = String(childIndex)
+
+      // Check if parent has a number suffix
+      const hasNumberSuffix = /\d$/.test(parentSymbol)
+
+      let gameName, tokenSymbol, leaderSymbol
+
+      if (hasNumberSuffix) {
+        // Use dot notation for children of children
+        gameName = `${parentName}.${childNumber}`
+        tokenSymbol = `${parentSymbol}.${childNumber}`
+        leaderSymbol = `${parentLeaderSymbol}.${childNumber}`
+      } else {
+        // First level children
+        gameName = `${parentName} ${childNumber}`
+        tokenSymbol = `${parentSymbol}${childNumber}`
+        leaderSymbol = `${parentLeaderSymbol}${childNumber}`
+      }
+
+      $.id('createChildNameInput').value = gameName
+      $.id('createChildTokenSymbolInput').value = tokenSymbol
+      $.id('createChildLeaderSymbolInput').value = leaderSymbol
+    }
+
     // Wire up create child game button
     const createChildBtn = $.id('createChildBtn')
     if (createChildBtn) {
+      autoFillChildInputs()
+
       createChildBtn.onclick = handleTx(async () => {
         const amount = parseFloat($.id('createChildInput').value)
         if (!amount || amount <= 0) {
           throw new Error('Invalid amount')
         }
 
-        // Generate child names/symbols automatically
-        const parentName = await PyramidGame.name()
-        const parentSymbol = await PyramidGame.symbol()
-        const parentLeaderboard = await PyramidGame.leaderboard()
-        const leaderboardContract = await provider.contract(parentLeaderboard, CONTRACTS.PyramidGameLeaderboard.abi)
-        const parentLeaderSymbol = await leaderboardContract.symbol()
+        const gameName = $.id('createChildNameInput').value
+        const tokenSymbol = $.id('createChildTokenSymbolInput').value
+        const leaderSymbol = $.id('createChildLeaderSymbolInput').value
 
-        const childIndex = Number(await PyramidGame.totalChildren()) + 1
-        const childNumber = String(childIndex)
-
-        // Check if parent has a number suffix
-        const hasNumberSuffix = /\d$/.test(parentSymbol)
-
-        let gameName, tokenSymbol, leaderSymbol
-
-        if (hasNumberSuffix) {
-          // Use dot notation for children of children
-          gameName = `${parentName}.${childNumber}`
-          tokenSymbol = `${parentSymbol}.${childNumber}`
-          leaderSymbol = `${parentLeaderSymbol}.${childNumber}`
-        } else {
-          // First level children
-          gameName = `${parentName} ${childNumber}`
-          tokenSymbol = `${parentSymbol}${childNumber}`
-          leaderSymbol = `${parentLeaderSymbol}${childNumber}`
+        if (!gameName || !tokenSymbol || !leaderSymbol) {
+          throw new Error('Please fill in all fields')
         }
 
         return await PyramidGame.deployChildPyramidGame(gameName, tokenSymbol, leaderSymbol, txValue(amount))
